@@ -186,7 +186,7 @@ def crossover(parent1, parent2):
     return child
 
 def crossover2(parent1, parent2):
-    # Perform crossover between two parents using a modified approach
+    # Perform crossover between two parents using Uniform Crossover
     
     # Choose the solution with fewer nodes as the primary parent
     if sum(len(route) for route in parent1) < sum(len(route) for route in parent2):
@@ -211,7 +211,7 @@ def mutate(solution, free_slots, custom_range):
     mutated_solution = solution.copy()
     sentinel_index = random.randint(0, len(mutated_solution) - 1)
     current_node = mutated_solution[sentinel_index][-1]
-
+    
     while len(free_slots) > 0:
         nearby_candidates = [node for node in free_slots if math.dist(current_node, node) < custom_range]
         if not nearby_candidates:

@@ -348,30 +348,30 @@ def bellman_ford(grid, free_slots, sink, relays, sentinels):
     return dist, sentinel_bman, cal_bman
 
 
-def get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, alpha, beta):
+def get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta):
     if not sentinel_bman:  # Check if sentinel distances list is empty (all unreachable)
         calculate_performance = 0
         calculate_hops = 0
     else:
         #calculate_performance = (0.5 * len(sinked_relays)) + (0.5 * cal_bman)
-        calculate_performance = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, alpha, beta)
+        calculate_performance = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size,  alpha, beta)
         calculate_hops = cal_bman / len(sentinel_bman)
     calculate_relays = len(sinked_relays)
     return calculate_performance, calculate_relays, calculate_hops
 
-def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, alpha, beta):
-    distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
+def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta):
     epsilon = cal_bman
 
     # The cal_bman is now considered as the epsilon bound
-    performance = (alpha * len(sinked_relays)) + (beta * cal_bman)
+    performance = ((alpha * len(sinked_relays)) + (beta * (cal_bman / mesh_size)))
 
-    # If the performance exceeds the epsilon bound (cal_bman), return 0
-    if performance > epsilon:
+    return performance
+    '''# If the performance exceeds the epsilon bound (cal_bman), return 0
+    if performance >= epsilon:
         return float('inf')
     else:
         # Otherwise, return the calculated performance
-        return performance
+        return performance'''
 
 '''
     Epsilon constraint method to return a pareto front

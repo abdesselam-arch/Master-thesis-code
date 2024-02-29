@@ -17,38 +17,21 @@ from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, sa
 def createEverything(chosen_grid, sink_location, mesh_size):
     free_slots = []
 
-    grid = chosen_grid * 20
-
-    if (chosen_grid % 2) == 0:
-        sink = ((grid / 2) + 10, (grid / 2) - 10)
-    elif (chosen_grid % 2) == 1:
-            sink = (((grid - 20) / 2) + 10, ((grid - 20) / 2) + 10)
+    grid = chosen_grid * mesh_size
 
     if sink_location == 'Center':
         if (chosen_grid % 2) == 0:
             sink = ((grid / 2) + 10, (grid / 2) - 10)
         elif (chosen_grid % 2) == 1:
-            sink = (((grid - 20) / 2) + 10, ((grid - 20) / 2) + 10)
+            sink = (((grid - mesh_size) / 2) + 10, ((grid - mesh_size) / 2) + 10)
     elif sink_location == 'Top Left':
-        sinkX = calculate_X( chosen_grid*(chosen_grid - 3) + 3,chosen_grid,mesh_size)
-        sinkY = calculate_Y( chosen_grid*(chosen_grid - 3) + 3,chosen_grid,mesh_size)
-        print(f'x = {round(sinkX)}, y = {round(sinkY)}')
-        sink = (round(sinkX), round(sinkY))
+        sink = (grid - (mesh_size*2 + mesh_size/2), grid - (mesh_size*2 + mesh_size/2))
     elif sink_location == 'Top Right':
-        sinkX = calculate_X( chosen_grid*(chosen_grid - 3) - 3,chosen_grid,mesh_size)
-        sinkY = calculate_Y( chosen_grid*(chosen_grid - 3) - 3,chosen_grid,mesh_size)
-        print(f'x = {round(sinkX)}, y = {round(sinkY)}')
-        sink = (round(sinkX), round(sinkY))
+        sink = (mesh_size*2 + mesh_size/2, grid - (mesh_size*2 + mesh_size/2))
     elif sink_location == 'Bottom Left':
-        sinkX = calculate_X( chosen_grid*3 + 3,chosen_grid,mesh_size)
-        sinkY = calculate_Y( chosen_grid*3 + 3,chosen_grid,mesh_size)
-        print(f'x = {round(sinkX)}, y = {round(sinkY)}')
-        sink = (round(sinkX), round(sinkY))                
+        sink = (mesh_size*2 + mesh_size/2, mesh_size*2 + mesh_size/2)               
     elif sink_location == 'Bottom Right':
-        sinkX = calculate_X( chosen_grid*3 - 3,chosen_grid,mesh_size)
-        sinkY = calculate_Y( chosen_grid*3 - 3,chosen_grid,mesh_size)
-        print(f'x = {round(sinkX)}, y = {round(sinkY)}')
-        sink = (round(sinkX), round(sinkY))   
+        sink = (grid - (mesh_size*2 + mesh_size/2), mesh_size*2 + mesh_size/2)  
 
     # Create sentinels
     sinkless_sentinels = [(x, 10) for x in range(10, grid + 10, 20)] + \
@@ -84,8 +67,12 @@ class MyApplication(QWidget):
         self.grid_size_input = QLineEdit()
         self.mesh_size_label = QLabel('Mesh Size:')
         self.mesh_size_input = QLineEdit()
-        self.range_label = QLabel('Sensing and Communication Range:')
+        self.range_label = QLabel('Communication Range:')
         self.range_input = QLineEdit()
+        self.range_input.setPlaceholderText('30')
+        self.sens_range_label = QLabel('Sensing Range:')
+        self.sens_range_input = QLineEdit()
+        self.sens_range_input.setPlaceholderText('15')
 
         self.execution_type_label = QLabel('Execution Type:')
         
@@ -137,6 +124,8 @@ class MyApplication(QWidget):
         input_layout.addWidget(self.mesh_size_input)
         input_layout.addWidget(self.range_label)
         input_layout.addWidget(self.range_input)
+        input_layout.addWidget(self.sens_range_label)
+        input_layout.addWidget(self.sens_range_input)
         input_layout.addWidget(self.execution_type_label)
         input_layout.addWidget(self.execution_type_radio_button_0)
         input_layout.addWidget(self.execution_type_radio_button_1)
@@ -165,7 +154,7 @@ class MyApplication(QWidget):
         self.setLayout(main_layout)
 
         # Applying Styles        
-        input_fields = [self.grid_size_input, self.mesh_size_input, self.range_input,
+        input_fields = [self.grid_size_input, self.mesh_size_input, self.range_input, self.sens_range_input,
                         self.Number_of_executions_input, self.alpha_input, self.beta_input]
         for field in input_fields:
             field.setStyleSheet("background-color: #f0f0f0; color: #333333; font-size: 16px;")
@@ -180,7 +169,8 @@ class MyApplication(QWidget):
     def run_application(self):
         chosen_grid = int(self.grid_size_input.text())
         mesh_size = int(self.mesh_size_input.text())
-        custom_range = int(self.range_input.text())
+        custom_range = int(self.range_input.text() or 30)
+        sensing_range = int(self.sens_range_input.text() or 15)
         user_input = int(self.Number_of_executions_input.text() or 1)
         sink_location = self.Sink_location_input.currentText()
         alpha = float(self.alpha_input.text() or 0.5)
@@ -198,37 +188,40 @@ class MyApplication(QWidget):
 
             self.output_text.append("\n   Starting Genetic algorithm...")
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(2, 5, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(2, 8, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
             self.output_text.append("\n   Please wait until some calculations are finished...")
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                 sinked_sentinels)
-            performance_before, relays_before, hops_before = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, alpha, beta)
+            performance_before, relays_before, hops_before = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta) 
+            diameter_before = round(cal_bman / mesh_size)                      
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f'\n Fitness BEFORE: {performance_before}')
-            self.output_text.append(f"\n Network diameter BEFORE: {round(cal_bman / mesh_size)}")
+            self.output_text.append(f"\n Network diameter BEFORE: {diameter_before}")
             self.output_text.append(f'\n Relays BEFORE: {relays_before}')
             self.output_text.append(f'\n Hops BEFORE: {hops_before}')
 
             display(grid, sink, sinked_relays, sinked_sentinels, title="Genetic Algorithm")
 
-            self.output_text.append("\n   Starting Variable Neighborhood Search algorithm...")
+            self.output_text.append("\n   Starting Variable Neighborhood Descent algorithm...")
             sinked_relays, free_slots = Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays,
-                                                                 free_slots, custom_range, lmax=5, alpha=alpha, beta=beta)
-            self.output_text.append("   Variable Neighborhood Search algorithm finished execution successfully !")
+                                                                 free_slots, custom_range, mesh_size, lmax=5, alpha=alpha, beta=beta)
+            self.output_text.append("   Variable Neighborhood Descent algorithm finished execution successfully !")
 
             self.output_text.append("\n   Please wait until some calculations are finished...")
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-            performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, alpha, beta)
+            performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
+            diameter_after = round(cal_bman / mesh_size)
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f"\nFitness BEFORE: {performance_before}")
             self.output_text.append(f"Fitness AFTER: {performance_after}\n")
 
-            self.output_text.append(f"Network diameter AFTER: {round(cal_bman / mesh_size)}\n")
+            self.output_text.append(f"Network diameter BEFORE: {diameter_before}")
+            self.output_text.append(f"Network diameter AFTER: {diameter_after}\n")
 
             self.output_text.append(f"Relays BEFORE: {relays_before}")
             self.output_text.append(f"Relays AFTER: {relays_after}\n")
@@ -286,7 +279,7 @@ class MyApplication(QWidget):
                 self.output_text.append("\n   Please wait until some calculations are finished...")
                 distance_bman, sentinel_bman, genetic_cal_bman = bellman_ford(grid, genetic_free_slots, sink, genetic_sinked_relays,
                                                                     genetic_sinked_sentinels)
-                performance_before, relays_before, hops_before = get_stat(genetic_sinked_relays, sentinel_bman, genetic_cal_bman, grid, genetic_free_slots, sink, genetic_sinked_sentinels, alpha, beta)
+                performance_before, relays_before, hops_before = get_stat(genetic_sinked_relays, sentinel_bman, genetic_cal_bman, grid, genetic_free_slots, sink, genetic_sinked_sentinels, mesh_size, alpha, beta)
                 self.output_text.append("   Calculations are done !")
 
                 self.output_text.append(f"\n Network diameter BEFORE: {round(genetic_cal_bman / mesh_size)}")
@@ -305,19 +298,19 @@ class MyApplication(QWidget):
 
                 self.output_text.append(f"\n # This is the {get_ordinal_number(executions)} VNS grid execution.")
 
-                self.output_text.append("\n   Starting Variable Neighborhood Search algorithm...")
-                sinked_relays, free_slots = Variable_Neighborhood_Search(grid, sink, sinked_sentinels, sinked_relays,
-                                                                        free_slots, custom_range)
+                self.output_text.append("\n   Starting Variable Neighborhood Descent algorithm...")
+                sinked_relays, free_slots = Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays,
+                                                                        free_slots, custom_range, mesh_size, lmax=5, alpha=alpha, beta=beta)
                 VNS_grid_data = [grid, sink, sinked_relays, sinked_sentinels]
-                self.output_text.append("   Variable Neighborhood Search algorithm finished execution successfully !")
+                self.output_text.append("   Variable Neighborhood Descent algorithm finished execution successfully !")
 
                 self.output_text.append("\n   Please wait until some calculations are finished...")
                 distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                     sinked_sentinels)
-                performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, alpha, beta)
+                performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
                 self.output_text.append("   Calculations are done !")
 
-                display(grid, sink, sinked_relays, sinked_sentinels, title=f"{get_ordinal_number(executions)} VNS Algorihtm")
+                display(grid, sink, sinked_relays, sinked_sentinels, title=f"{get_ordinal_number(executions)} VND Algorihtm")
 
                 self.output_text.append(f"\nFitness BEFORE: {performance_before}")
                 self.output_text.append(f"Fitness AFTER: {performance_after}\n")

@@ -1,11 +1,8 @@
 import math
 import random
+import multiprocessing
 
 from PersonalModules.utilities import bellman_ford, epsilon_constraints, get_stat
-
-'''
-    5 Neighborhoods
-'''
 
 def add_next_to_relay(sentinels, sinked_relays, free_slots, remember_used_relays):
     performed_action = []
@@ -44,26 +41,19 @@ def delete_random_relay(sentinels, sinked_relays, free_slots, remember_used_rela
 def delete_relay_next_to_sentinel(sentinels, sinked_relays, free_slots, remember_used_relays, custom_range):
     performed_action = []
     
-    # Dictionary to store the count of relays next to each sentinel
     sentinel_neighbor_count = {tuple(sentinel): 0 for sentinel in sentinels}
     
-    # Count the number of relays next to each sentinel
     for sentinel in sentinels:
         for relay in sinked_relays:
             if math.dist(sentinel, relay[0]) < custom_range:
                 sentinel_neighbor_count[tuple(sentinel)] += 1
     
-    # Filter out sentinels with multiple relay neighbors
     sentinels_with_multiple_neighbors = [sentinel for sentinel, count in sentinel_neighbor_count.items() if count > 1]
     
-    # Select a random sentinel with multiple relay neighbors, if any
     if sentinels_with_multiple_neighbors:
         chosen_sentinel = random.choice(sentinels_with_multiple_neighbors)
-        
-        # Find relays next to the chosen sentinel
         relays_next_to_chosen_sentinel = [relay for relay in sinked_relays if math.dist(chosen_sentinel, relay[0]) < 30]
         
-        # Delete a random relay next to the chosen sentinel
         if relays_next_to_chosen_sentinel:
             chosen_random_relay = random.choice(relays_next_to_chosen_sentinel)
             sinked_relays = [relay for relay in sinked_relays if relay[0] != chosen_random_relay[0]]
@@ -77,17 +67,14 @@ def swap_relays_with_free_slots(sentinels, sinked_relays, free_slots, remember_u
     performed_action = []
     
     if sinked_relays and free_slots:
-        # Choose a relay and a free slot randomly
         relay_index = random.randint(0, len(sinked_relays) - 1)
         free_slot_index = random.randint(0, len(free_slots) - 1)
         
-        # Swap the positions of the relay and the free slot
         relay_position = sinked_relays[relay_index][0]
         free_slot_position = free_slots[free_slot_index]
         sinked_relays[relay_index] = (free_slot_position, sinked_relays[relay_index][1])
         free_slots[free_slot_index] = relay_position
 
-        # Update the performed action to reflect the swap
         performed_action = [2, (sinked_relays[relay_index], free_slots[free_slot_index]), "(LS) Swap relay with free slot"]
     
     return free_slots, sinked_relays, performed_action, remember_used_relays
@@ -110,28 +97,9 @@ def add_relay_next_to_sentinel(sentinels, sinked_relays, free_slots, remember_us
                 performed_action = [1, chosen_slot, "(P) Add a relay next to a sentinel with no relay neighbors."]
                 free_slots.remove(chosen_slot)
                 remember_used_relays.append(chosen_slot)
-                break  # Only add one relay per iteration
+                break
     
     return free_slots, sinked_relays, performed_action, remember_used_relays
-
-def swap_relays(sentinels, sinked_relays, free_slots, remember_used_relays):
-    performed_action = []
-    
-    if len(sinked_relays) >= 2:
-        # Choose two distinct relays randomly
-        i, j = random.sample(range(len(sinked_relays)), 2)
-        
-        # Swap the positions of the two relays
-        sinked_relays[i], sinked_relays[j] = sinked_relays[j], sinked_relays[i]
-
-        # Update the performed action to reflect the swap
-        performed_action = [2, (sinked_relays[i], sinked_relays[j]), "(LS) Swap relay positions"]
-    
-    return free_slots, sinked_relays, performed_action, remember_used_relays
-
-'''
-    Helper functions
-'''
 
 def get_min_max_meshes(sinked_relays, free_slots):
     min_meshes_candidate = []
@@ -141,79 +109,69 @@ def get_min_max_meshes(sinked_relays, free_slots):
     for i in range(len(sinked_relays)):
         empty_meshes_counter = 0
 
-        # Calculate meshes around a sinked relay
         for j in range(len(free_slots)):
             if math.dist(sinked_relays[i][0], free_slots[j]) < 30:
                 empty_meshes_counter = empty_meshes_counter + 1
 
         if len(min_meshes_candidate) != 0 and len(max_meshes_candidate) != 0:
-
-            # Acquire minimum meshes
             if min_meshes_candidate[1] > empty_meshes_counter:
                 min_meshes_candidate = [sinked_relays[i], empty_meshes_counter]
 
-            # Acquire maximum meshes
             if max_meshes_candidate[1] < empty_meshes_counter:
                 max_meshes_candidate = [sinked_relays[i], empty_meshes_counter]
         else:
             min_meshes_candidate = [sinked_relays[i], empty_meshes_counter]
             max_meshes_candidate = [sinked_relays[i], empty_meshes_counter]
+    
     return min_meshes_candidate, max_meshes_candidate
 
-def Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta):
-    l = 1  # Neighborhood counter
-    
-    while l <= lmax:
-        i = 0  # Neighbor counter
-        improvement = True  # Flag to indicate improvement
-
-        distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-        previous = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta)
+def parallel_explore_neighborhood(task_queue, result_queue, grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, alpha, beta):
+    while not task_queue.empty():
+        task = task_queue.get()
+        neighborhood_index = task[0]
         
-        print(f'Sentinel bman: {sentinel_bman}')
+        if neighborhood_index == 1:
+            free_slots, sinked_relays, action, remember_used_relays = add_next_to_relay(sinked_sentinels, sinked_relays, free_slots, [])
+        elif neighborhood_index == 2:
+            free_slots, sinked_relays, action, remember_used_relays = delete_random_relay(sinked_sentinels, sinked_relays, free_slots, [])
+        elif neighborhood_index == 3:
+            free_slots, sinked_relays, action, remember_used_relays = delete_relay_next_to_sentinel(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
+        elif neighborhood_index == 4:
+            free_slots, sinked_relays, action, remember_used_relays = swap_relays_with_free_slots(sinked_sentinels, sinked_relays, free_slots, [])
+        elif neighborhood_index == 5:
+            free_slots, sinked_relays, action, remember_used_relays = add_relay_next_to_sentinel(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
         
-        while improvement and i < len(sinked_relays) + 1:
-            improvement = False
-            i += 1
+        result_queue.put((neighborhood_index, free_slots, sinked_relays, action, remember_used_relays))
 
-            if l == 1:
-                for _ in range(20):
-                    free_slots, sinked_relays, action, remember_used_relays = add_next_to_relay(sinked_sentinels, sinked_relays, free_slots, [])
-                    print('Relay added')
-            
-            elif l == 2:
-                free_slots, sinked_relays, action, remember_used_relays = delete_random_relay(sinked_sentinels, sinked_relays, free_slots, [])
-                print('Random relay deleted ')
-            
-            elif l == 3:
-                free_slots, sinked_relays, action, remember_used_relays = delete_relay_next_to_sentinel(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
-                print('Relay next to sentinel deleted')
-            
-            elif l == 4:
-                for _ in range(20):
-                    free_slots, sinked_relays, action, remember_used_relays = swap_relays(sinked_sentinels, sinked_relays, free_slots, remember_used_relays)
-                    print('Relays swaped')
-            
-            elif l == 5:
-                for _ in range(20):
-                    free_slots, sinked_relays, action, remember_used_relays = add_relay_next_to_sentinel(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
-                    print('Relay added next to sentinel with no neighbors')
-            
-            distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-            after = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta)
+def parallel_vnd(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta):
+    num_cores = multiprocessing.cpu_count()
+    task_queue = multiprocessing.Queue()
+    result_queue = multiprocessing.Queue()
 
-            print(f'Sentinel bman: {sentinel_bman}')
+    for neighborhood_index in range(1, 6):
+        task_queue.put((neighborhood_index,))
 
-            if previous > after:
-                print(f'\nPrevious Fitness: {previous}, After Fitness: {after}')
-                improvement = True
+    processes = []
+    for _ in range(num_cores):
+        process = multiprocessing.Process(target=parallel_explore_neighborhood, args=(task_queue, result_queue, grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, alpha, beta))
+        processes.append(process)
+        process.start()
+
+    for process in processes:
+        process.join()
+
+    while not result_queue.empty():
+        neighborhood_index, result = result_queue.get()
         
-        l += 1
-        print(f'\n {l} Neighborhood Previous Fitness: {previous}, After Fitness: {after}')
-        print(f'There are {len(sinked_relays)} relays deployed\n')
-        print(f'There are {len(free_slots)} free slots remaining')
-
-        distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-        print(f'Sentinel bman: {sentinel_bman}') 
+        if neighborhood_index == 1:
+            free_slots, sinked_relays, action, remember_used_relays = result
+        elif neighborhood_index == 2:
+            free_slots, sinked_relays, action, remember_used_relays = result
+        elif neighborhood_index == 3:
+            free_slots, sinked_relays, action, remember_used_relays = result
+        elif neighborhood_index == 4:
+            free_slots, sinked_relays, action, remember_used_relays = result
+        elif neighborhood_index == 5:
+            free_slots, sinked_relays, action, remember_used_relays = result
 
     return sinked_relays, free_slots
