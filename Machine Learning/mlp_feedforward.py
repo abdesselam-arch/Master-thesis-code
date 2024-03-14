@@ -17,10 +17,12 @@ class MLPFeedfoward:
             self.W[i + 1] = np.random.randn(self.sizes[i], self.sizes[i + 1])
             self.B[i + 1] = np.zeros((1, self.sizes[i + 1]))
 
-    # Activation function for the output layer
+    # Activation function for the output layer (logistic sigmoid)
     def sigmoid(self, x):
         return 1.0/(1.0 + np.exp(-x))
 
+
+    # Transfer function
     def forward_pass(self, x):
         self.A = {}
         self.H = {}

@@ -14,6 +14,17 @@ from PersonalModules.utilities import bellman_ford, display, get_stat
 from PersonalModules.vns import Variable_Neighborhood_Search
 from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, save2
 
+def get_Diameter(sentinel_bman):
+    if 999 in sentinel_bman:
+        # First, remove duplicates from the list
+        sentinel_bman = list(set(sentinel_bman))
+        
+        sentinel_bman.sort(reverse=True)
+        diameter = sentinel_bman[1]
+        return diameter
+    else:
+        return max(sentinel_bman)
+
 def createEverything(chosen_grid, sink_location, mesh_size):
     free_slots = []
 
@@ -188,7 +199,7 @@ class MyApplication(QWidget):
 
             self.output_text.append("\n   Starting Genetic algorithm...")
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(2, 8, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
@@ -196,7 +207,7 @@ class MyApplication(QWidget):
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                 sinked_sentinels)
             performance_before, relays_before, hops_before = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta) 
-            diameter_before = round(cal_bman / mesh_size)                      
+            diameter_before = get_Diameter(sentinel_bman)                     
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f'\n Fitness BEFORE: {performance_before}')
@@ -214,7 +225,8 @@ class MyApplication(QWidget):
             self.output_text.append("\n   Please wait until some calculations are finished...")
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
             performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
-            diameter_after = round(cal_bman / mesh_size)
+            #diameter_after = round(cal_bman / mesh_size)
+            diameter_after = get_Diameter(sentinel_bman)
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f"\nFitness BEFORE: {performance_before}")
@@ -280,9 +292,10 @@ class MyApplication(QWidget):
                 distance_bman, sentinel_bman, genetic_cal_bman = bellman_ford(grid, genetic_free_slots, sink, genetic_sinked_relays,
                                                                     genetic_sinked_sentinels)
                 performance_before, relays_before, hops_before = get_stat(genetic_sinked_relays, sentinel_bman, genetic_cal_bman, grid, genetic_free_slots, sink, genetic_sinked_sentinels, mesh_size, alpha, beta)
+                diameter_before = get_Diameter(sentinel_bman)
                 self.output_text.append("   Calculations are done !")
 
-                self.output_text.append(f"\n Network diameter BEFORE: {round(genetic_cal_bman / mesh_size)}")
+                self.output_text.append(f"\n Network diameter BEFORE: {performance_before}")
 
                 display(grid, sink, genetic_sinked_relays, genetic_sinked_sentinels, title="Genetic Algorihtm")
 
@@ -290,7 +303,7 @@ class MyApplication(QWidget):
                 sinked_sentinels = genetic_sinked_sentinels
                 free_slots = genetic_free_slots
 
-                ga_diameter = genetic_cal_bman/mesh_size
+                ga_diameter = diameter_before
                 ga_avg_hops += hops_before
                 ga_avg_relays += relays_before
                 ga_avg_performance += performance_before
@@ -308,6 +321,7 @@ class MyApplication(QWidget):
                 distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                     sinked_sentinels)
                 performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
+                diameter_after = get_Diameter(sentinel_bman)
                 self.output_text.append("   Calculations are done !")
 
                 display(grid, sink, sinked_relays, sinked_sentinels, title=f"{get_ordinal_number(executions)} VND Algorihtm")
@@ -318,21 +332,23 @@ class MyApplication(QWidget):
                 self.output_text.append(f"Relays BEFORE: {relays_before}")
                 self.output_text.append(f"Relays AFTER: {relays_after}\n")
 
-                self.output_text.append(f"\n Network diameter AFTER: {round(cal_bman / mesh_size)}")
+                self.output_text.append(f"Network diameter BEFORE: {diameter_before}")
+                self.output_text.append(f"Network diameter AFTER: {diameter_after}\n")
 
                 self.output_text.append(f"Hops Average BEFORE: {hops_before}")
                 self.output_text.append(f"Hops Average AFTER: {hops_after}\n")
 
-                vns_diameter = cal_bman/mesh_size
                 vns_avg_hops += hops_after
                 vns_avg_relays += relays_after
                 vns_avg_performance += performance_after
-                vns_avg_diameter += vns_diameter
+                vns_avg_diameter += diameter_after
 
                 executions = executions + 1
 
             # Aftermath
             stop = False
+
+            self.output_text.append('\n\nSimulation Results:\n')
 
             self.output_text.append('GA Results AVERAGE:')
 

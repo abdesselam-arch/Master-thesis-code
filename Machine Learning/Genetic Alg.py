@@ -86,6 +86,16 @@ def tournament_selection(population, X, y):
 
 # Perform crossover
 def crossover(parent1, parent2):
+    '''
+    Info:
+        Funciton that realizes the crossover operation on the children
+    
+    Input:
+        Parent: parent 1 and parent 2
+    
+    Outuput:
+        Children: child 1 and child 2
+    '''
     crossover_point = random.randint(1, len(parent1) - 1)
     child1 = parent1[:crossover_point] + parent2[crossover_point:]
     child2 = parent2[:crossover_point] + parent1[crossover_point:]
@@ -93,6 +103,18 @@ def crossover(parent1, parent2):
 
 # Perform mutation
 def mutate(genome, mutation_rate):
+    '''
+    Info: 
+        Funciton that realizes the mutation operation on the child
+    
+    Input:
+        genome: Child genome
+        mutation_rate: Mutation treshold value used
+    
+    Output:
+        genome: genome of the child
+    '''
+
     for i in range(len(genome)):
         if random.random() < mutation_rate:
             genome[i] = random.randint(1, 5)

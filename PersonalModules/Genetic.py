@@ -187,7 +187,7 @@ def crossover(parent1, parent2):
 
 def crossover2(parent1, parent2):
     # Perform crossover between two parents using Uniform Crossover
-    
+
     # Choose the solution with fewer nodes as the primary parent
     if sum(len(route) for route in parent1) < sum(len(route) for route in parent2):
         primary_parent = parent1
@@ -242,16 +242,22 @@ def mutate2(solution, free_slots, custom_range):
     print('Success! Mutation operation complete')
     return mutated_solution
 
-def evaluate(solution, sink, sinked_relays, grid, free_slots, sinked_sentinels):
+def evaluate(solution, sink, sinked_relays, grid, free_slots, sinked_sentinels, mesh_size):
+    #extract sinked relays
+    sinked_sentinels = [route[0] for route in solution]
+    sinked_relays = [relay for route in solution for relay in route[1:]]
     # Evaluate the fitness of the solution
     # Two objectives diameter, number of relays
     distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
     
     # Penalize solutions based on the total number of deployed nodes
     total_nodes = sum(len(route) for route in solution)
-    fitness = (0.4 * total_nodes / math.sqrt(grid)) + (0.3 * len(sinked_relays)) + (0.3 * cal_bman)
-    
-    return fitness
+    fitness = (0.4 * total_nodes / math.sqrt(grid)) + (0.3 * len(sinked_relays)) + (0.3 * (cal_bman / mesh_size))
+
+    if 999 in sentinel_bman:
+        return fitness * 100
+    else:      
+        return fitness
 
 def calculate_fitness(solution, sink, grid_size):
     total_distance = 0
@@ -296,7 +302,7 @@ def genetic_algorithm(population_size, generations, sink, sinkless_sentinels, fr
         print(f'Generation {generation+1}')
 
         # Evaluate the fitness of each solution in the population
-        fitness_scores = [evaluate(solution, sink, sinked_relays, grid, free_slots, sinked_sentinels) for solution in population]
+        fitness_scores = [evaluate(solution, sink, sinked_relays, grid, free_slots, sinked_sentinels, mesh_size) for solution in population]
         print(fitness_scores)
         all_fitness_scores.append(fitness_scores)  # Store fitness scores of all solutions
 
@@ -347,7 +353,7 @@ def genetic_algorithm(population_size, generations, sink, sinkless_sentinels, fr
 
     # Ensure dimensions match by creating a range of generations of the same length as best_fitness_per_generation
     generations_range = range(len(fitness_per_generation))
-    #plot_best_solution(generations_range, fitness_per_generation)
+    plot_best_solution(generations_range, fitness_per_generation)
     #plot_fitness_scores(all_fitness_scores)
 
     print('\nSinked Sentinels\n',sinked_sentinels)

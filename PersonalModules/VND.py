@@ -1,7 +1,10 @@
 import math
 import random
 
+import numpy as np
+
 from PersonalModules.utilities import bellman_ford, epsilon_constraints, get_stat
+from PersonalModules import Upper_Bound_Confident
 
 '''
     5 Neighborhoods
@@ -175,9 +178,9 @@ def Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays, f
         while improvement and i < len(sinked_relays) + 1:
             improvement = False
             i += 1
-
+            
             if l == 1:
-                for _ in range(20):
+                for _ in range(len(free_slots)):
                     free_slots, sinked_relays, action, remember_used_relays = add_next_to_relay(sinked_sentinels, sinked_relays, free_slots, [])
                     print('Relay added')
             
@@ -190,12 +193,12 @@ def Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays, f
                 print('Relay next to sentinel deleted')
             
             elif l == 4:
-                for _ in range(20):
-                    free_slots, sinked_relays, action, remember_used_relays = swap_relays(sinked_sentinels, sinked_relays, free_slots, remember_used_relays)
-                    print('Relays swaped')
+                for _ in range(2):
+                    free_slots, sinked_relays, action, remember_used_relays = swap_relays_with_free_slots(sinked_sentinels, sinked_relays, free_slots, [])
+                    print('Relays positions swaped')
             
             elif l == 5:
-                for _ in range(20):
+                for _ in range(len(free_slots)):
                     free_slots, sinked_relays, action, remember_used_relays = add_relay_next_to_sentinel(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
                     print('Relay added next to sentinel with no neighbors')
             
@@ -210,10 +213,10 @@ def Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays, f
         
         l += 1
         print(f'\n {l} Neighborhood Previous Fitness: {previous}, After Fitness: {after}')
-        print(f'There are {len(sinked_relays)} relays deployed\n')
+        print(f'\nThere are {len(sinked_relays)} relays deployed')
         print(f'There are {len(free_slots)} free slots remaining')
 
         distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-        print(f'Sentinel bman: {sentinel_bman}') 
+        print(f'VND Sentinel bman: {sentinel_bman}') 
 
     return sinked_relays, free_slots

@@ -359,33 +359,23 @@ def get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sin
     calculate_relays = len(sinked_relays)
     return calculate_performance, calculate_relays, calculate_hops
 
-def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta):
+def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta):    
     epsilon = cal_bman
-
+    
+    #distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
+    
     # The cal_bman is now considered as the epsilon bound
-    performance = ((alpha * len(sinked_relays)) + (beta * (cal_bman / mesh_size)))
-
+    performance = ((alpha * len(sinked_relays)) + (beta * (cal_bman/mesh_size)))
     return performance
-    '''# If the performance exceeds the epsilon bound (cal_bman), return 0
+    
+    '''
+    if 999 in sentinel_bman:
+        return performance + math.sqrt(grid)
+    else:
+        return performance
+    # If the performance exceeds the epsilon bound (cal_bman), return 0
     if performance >= epsilon:
-        return float('inf')
+        return performance + math.sqrt(grid)
     else:
         # Otherwise, return the calculated performance
         return performance'''
-
-'''
-    Epsilon constraint method to return a pareto front
-'''
-'''def epsilon_constraint_method(grid, free_slots, sink, sinked_relays, sinked_sentinels, alpha, beta):
-    pareto_front = []
-    for epsilon in range(1, 11):  # Adjust the range of epsilon as needed
-        distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-
-        # The cal_bman is now considered as the epsilon bound
-        performance = (alpha * len(sinked_relays)) + (beta * cal_bman)
-
-        # If the performance does not exceed the epsilon bound (cal_bman), add to the Pareto front
-        if performance <= epsilon:
-            pareto_front.append((performance, cal_bman, len(sinked_relays)))
-
-    return pareto_front'''
