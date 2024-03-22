@@ -8,20 +8,17 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 import tabulate
 
 from PersonalModules.Genetic import genetic_algorithm
+from PersonalModules.UCB_VND import UCB_VND
+from PersonalModules.Upper_Confidence_Bound import plot_histogram
 from PersonalModules.VND import Variable_Neighborhood_Descent
 from PersonalModules.greedy import greedy_algorithm
 from PersonalModules.utilities import bellman_ford, display, get_stat
 from PersonalModules.vns import Variable_Neighborhood_Search
 from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, save2
 
-def get_Diameter(sentinel_bman):
+def get_Diameter(sentinel_bman, cal_bman, mesh_size):
     if 999 in sentinel_bman:
-        # First, remove duplicates from the list
-        sentinel_bman = list(set(sentinel_bman))
-        
-        sentinel_bman.sort(reverse=True)
-        diameter = sentinel_bman[1]
-        return diameter
+        return cal_bman/mesh_size
     else:
         return max(sentinel_bman)
 
@@ -207,7 +204,7 @@ class MyApplication(QWidget):
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                 sinked_sentinels)
             performance_before, relays_before, hops_before = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta) 
-            diameter_before = get_Diameter(sentinel_bman)                     
+            diameter_before = get_Diameter(sentinel_bman, cal_bman, mesh_size)                     
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f'\n Fitness BEFORE: {performance_before}')
@@ -218,7 +215,7 @@ class MyApplication(QWidget):
             display(grid, sink, sinked_relays, sinked_sentinels, title="Genetic Algorithm")
 
             self.output_text.append("\n   Starting Variable Neighborhood Descent algorithm...")
-            sinked_relays, free_slots = Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays,
+            sinked_relays, free_slots = UCB_VND(grid, sink, sinked_sentinels, sinked_relays,
                                                                  free_slots, custom_range, mesh_size, lmax=5, alpha=alpha, beta=beta)
             self.output_text.append("   Variable Neighborhood Descent algorithm finished execution successfully !")
 
@@ -226,7 +223,7 @@ class MyApplication(QWidget):
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
             performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
             #diameter_after = round(cal_bman / mesh_size)
-            diameter_after = get_Diameter(sentinel_bman)
+            diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size)
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f"\nFitness BEFORE: {performance_before}")
@@ -292,7 +289,7 @@ class MyApplication(QWidget):
                 distance_bman, sentinel_bman, genetic_cal_bman = bellman_ford(grid, genetic_free_slots, sink, genetic_sinked_relays,
                                                                     genetic_sinked_sentinels)
                 performance_before, relays_before, hops_before = get_stat(genetic_sinked_relays, sentinel_bman, genetic_cal_bman, grid, genetic_free_slots, sink, genetic_sinked_sentinels, mesh_size, alpha, beta)
-                diameter_before = get_Diameter(sentinel_bman)
+                diameter_before = get_Diameter(sentinel_bman, genetic_cal_bman, mesh_size)
                 self.output_text.append("   Calculations are done !")
 
                 self.output_text.append(f"\n Network diameter BEFORE: {performance_before}")
@@ -312,7 +309,7 @@ class MyApplication(QWidget):
                 self.output_text.append(f"\n # This is the {get_ordinal_number(executions)} VNS grid execution.")
 
                 self.output_text.append("\n   Starting Variable Neighborhood Descent algorithm...")
-                sinked_relays, free_slots = Variable_Neighborhood_Descent(grid, sink, sinked_sentinels, sinked_relays,
+                sinked_relays, free_slots = UCB_VND(grid, sink, sinked_sentinels, sinked_relays,
                                                                         free_slots, custom_range, mesh_size, lmax=5, alpha=alpha, beta=beta)
                 VNS_grid_data = [grid, sink, sinked_relays, sinked_sentinels]
                 self.output_text.append("   Variable Neighborhood Descent algorithm finished execution successfully !")
@@ -321,7 +318,7 @@ class MyApplication(QWidget):
                 distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                     sinked_sentinels)
                 performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
-                diameter_after = get_Diameter(sentinel_bman)
+                diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size)
                 self.output_text.append("   Calculations are done !")
 
                 display(grid, sink, sinked_relays, sinked_sentinels, title=f"{get_ordinal_number(executions)} VND Algorihtm")

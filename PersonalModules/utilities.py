@@ -362,18 +362,16 @@ def get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sin
 def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta):    
     epsilon = cal_bman
     
-    #distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-    
+    distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
     # The cal_bman is now considered as the epsilon bound
     performance = ((alpha * len(sinked_relays)) + (beta * (cal_bman/mesh_size)))
-    return performance
-    
-    '''
+
     if 999 in sentinel_bman:
-        return performance + math.sqrt(grid)
+        return performance + 999
     else:
         return performance
-    # If the performance exceeds the epsilon bound (cal_bman), return 0
+    
+    '''# If the performance exceeds the epsilon bound (cal_bman), return 0
     if performance >= epsilon:
         return performance + math.sqrt(grid)
     else:

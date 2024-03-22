@@ -353,7 +353,7 @@ def genetic_algorithm(population_size, generations, sink, sinkless_sentinels, fr
 
     # Ensure dimensions match by creating a range of generations of the same length as best_fitness_per_generation
     generations_range = range(len(fitness_per_generation))
-    plot_best_solution(generations_range, fitness_per_generation)
+    #plot_best_solution(generations_range, fitness_per_generation)
     #plot_fitness_scores(all_fitness_scores)
 
     print('\nSinked Sentinels\n',sinked_sentinels)
