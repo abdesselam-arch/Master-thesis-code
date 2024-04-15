@@ -23,13 +23,24 @@ from PersonalModules.utilities import bellman_ford, epsilon_constraints
 Visualizing the results
 '''
 def plot_histogram(neighborhoods_selected):
-    plt.hist(neighborhoods_selected)
+    """
+    Plot a histogram of neighborhoods selections.
+
+    Args:
+        neighborhoods_selected (list): List of neighborhoods selected by the algorithm.
+
+    Returns:
+        None
+    """
+    # Count the occurrences of each neighborhood
+    neighborhood_counts = [neighborhoods_selected.count(i) for i in range(len(neighborhoods_selected))]
+    plt.hist(neighborhood_counts)
     plt.title('Histogram of Neighborhoods selections')
     plt.xlabel('Neighborhoods')
     plt.ylabel('Number of times each neighborhood was selected by the algorithm')
     plt.show()
 
-def Credit_Assignment(improvement, previous, after):
+def Credit_Assignment(improvement, previous, after, l):
     '''
     Calculate credit (regret or reward) based on improvement.
 
@@ -37,7 +48,6 @@ def Credit_Assignment(improvement, previous, after):
         improvement (bool): Wheter the action resulted in inmprovement.
         previous (int): The fitness before neighborhood action.
         after (int): The fitness after neighborhood action.
-        neighborhood_free (int): number of neighborhoods available in neighborhood pool
 
     Retruns:
         reward (int): Non binary reward
@@ -46,14 +56,20 @@ def Credit_Assignment(improvement, previous, after):
     Rs = abs(previous - after)
 
     if improvement:
-        Reward = Rs
-        return Reward
+        if l == 0 or l == 4:
+            return 2 * Rs 
+        elif l == 1:
+            return 4 * Rs
+        elif l == 2:
+            return 3 * Rs
+        elif l == 3:
+            return 2.5 * Rs
     else:
-        Regret = -Rs
-        return Regret
+        Penalty = -(Rs * 3)
+        return Penalty
 
 # UCB1 policy implementation ---------------------------------------------------------------------------------------------------------------------------
-def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta, improvement, exploration_factor):
+def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta, improvement, qualities, exploration_factor):
     """
     Applies UCB1 policy to generate neighborhood recommendations.
 
@@ -79,7 +95,7 @@ def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_
         if action_count == 0:
             '''
             At first, action_count = 0 meanning no neighborhood has been called
-            we can't base our calculation on that, we can randomize the action chosen
+            we can't base our calculation on that, we can randomize the action chosen (GVNS Shaking)
             we can also call each action sequentially, 1->2->3->4->5
             '''
             return random.randint(1, 5)
@@ -89,7 +105,6 @@ def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_
     
     total_actions = 0
     action_counts = [0] * lmax
-    qualities = [0.0] * lmax
     neighborhoods_selected = []
 
     # Choose neighborhood using UCB1
@@ -104,7 +119,7 @@ def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_
     elif chosen_neighborhood == 2:
         print('N3(s) - Relay next to sentinel deleted chosen\n')
     elif chosen_neighborhood == 3:
-        print('N4(s) - Relays swaped chosen\n')
+        print('N4(s) - Relays relocated chosen\n')
     elif chosen_neighborhood == 4:
         print('N5(s) - Relay added next to sentinel with no neighbors chosen\n')
 
@@ -112,7 +127,7 @@ def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_
     action_counts[chosen_neighborhood] += 1
     neighborhoods_selected.append(chosen_neighborhood)
     # Update qualities[chosen_neighborhood] based on fitness improvement or other metrics
-    
+
     # Plot the selection results
     plot_histogram(neighborhoods_selected)
     

@@ -6,64 +6,6 @@ from matplotlib.animation import FuncAnimation
 
 from PersonalModules.utilities import display_realtime
 
-
-def closest_relay(sink, candidate, sinked_relays, forbidden_sinked_relays):
-    # Here we're trying to find the closest sinked_relay to candidate and if tied then choose the sinked_relay
-    # closest to sink
-    counter = 0
-    closest = []
-    if len(forbidden_sinked_relays) == 0:
-        min = math.dist(candidate, sinked_relays[0][0])
-        closest = sinked_relays[0]
-        for i in range(len(sinked_relays)):
-
-            # Find the closest relay
-            if math.dist(candidate, sinked_relays[i][0]) < min:
-                min = math.dist(candidate, sinked_relays[i][0])
-                closest = sinked_relays[i]
-
-            # If tied choose closest to sink
-            elif math.dist(candidate, sinked_relays[i][0]) == min:
-                if math.dist(sink, sinked_relays[i][0]) < math.dist(sink, closest[0]):
-                    min = math.dist(sink, sinked_relays[i][0])
-                    closest = sinked_relays[i]
-    elif len(forbidden_sinked_relays) != 0:
-        allowed_sinked_relays = [x for x in sinked_relays if x not in forbidden_sinked_relays]
-        min = math.dist(candidate, allowed_sinked_relays[0][0])
-        closest = allowed_sinked_relays[0]
-        for i in range(len(allowed_sinked_relays)):
-
-            # Find the closest relay
-            if math.dist(candidate, allowed_sinked_relays[i][0]) < min:
-                min = math.dist(candidate, allowed_sinked_relays[i][0])
-                closest = allowed_sinked_relays[i]
-
-            # If tied choose closest to sink
-            elif math.dist(candidate, allowed_sinked_relays[i][0]) == min:
-                if math.dist(sink, allowed_sinked_relays[i][0]) < math.dist(sink, closest[0]):
-                    min = math.dist(sink, allowed_sinked_relays[i][0])
-                    closest = allowed_sinked_relays[i]
-        allowed_sinked_relays = [x for x in sinked_relays if x not in forbidden_sinked_relays]
-        closest_candidates = []
-
-        # Find the closest relay
-        for i in range(len(allowed_sinked_relays)):
-            if math.dist(candidate, allowed_sinked_relays[i][0]) < 30: # This is the range*
-                closest_candidates.append(allowed_sinked_relays[i])
-
-        if len(closest_candidates) > 1:
-            closest = closest_candidates[0]
-            min = closest_candidates[0][1]
-
-            # Choose the relay with minimum number of hops to sink
-            for i in range(len(closest_candidates)):
-                if min > closest_candidates[i][1]:
-                    closest = closest_candidates[i]
-                    min = closest_candidates[i][1]
-
-    return closest, counter
-
-
 def greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number, custom_range):
     First_time = True
     sentinels = sinkless_sentinels[:]
@@ -85,8 +27,7 @@ def greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number, cust
         if math.dist(current_sinkless_sentinel, sink) < custom_range:
             stop = True
         if len(sinked_relays) != 0:
-            a, useless_variable = closest_relay(sink, current_sinkless_sentinel, sinked_relays,
-                                                forbidden_sinked_relays)
+            a = random.choice(sinked_relays)
             if math.dist(current_sinkless_sentinel, a[0]) < custom_range:  # and max_hops_number >= a[1]
                 stop = True
 
@@ -114,7 +55,8 @@ def greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number, cust
                 free_slots = temp
             elif len(candidate_slots) == 0 and math.dist(current_node, current_sinkless_sentinel) < custom_range:
                 if len(sinked_relays) != 0 and len(sinked_relays) != len(forbidden_sinked_relays):
-                    a, useless_variable = closest_relay(sink, current_node, sinked_relays, forbidden_sinked_relays)
+                    #a, useless_variable = closest_relay(sink, current_node, sinked_relays, forbidden_sinked_relays)
+                    a = random.choice(sinked_relays)
                     extra_hops = a[1]
                 stop = True
 
@@ -140,7 +82,8 @@ def greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number, cust
 
                 # Condition to STOP the loop when near sink or sinked_relay
                 if len(sinked_relays) != 0 and len(sinked_relays) != len(forbidden_sinked_relays):
-                    a, useless_variable = closest_relay(sink, current_node, sinked_relays, forbidden_sinked_relays)
+                    a = random.choice(sinked_relays)
+                    #a, useless_variable = closest_relay(sink, current_node, sinked_relays, forbidden_sinked_relays)
                 if (len(sinked_relays) == 0 or (
                         len(sinked_relays) != 0 and len(sinked_relays) == len(forbidden_sinked_relays))) and math.dist(
                     current_node, sink) < 30:
@@ -211,8 +154,7 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
             # In case this is NOT the first attempt (where sinked_relays != 0)
             elif len(sinked_relays) != 0 and math.dist(candidate_slots[i], free_slots[j]) < 30 and math.dist(
                     candidate_slots[i], free_slots[j]) != 0:
-                a, useless_variable = closest_relay(sink, candidate_slots[i], sinked_relays,
-                                                    forbidden_sinked_relays)
+                a = random.choice(sinked_relays)
 
                 # Determine how many free_slots each candidate have (that's far from sink and allowed sinked_relay)
                 if math.dist(sink, candidate_slots[i]) > 30 and math.dist(candidate_slots[i], a[0]) > 30:
@@ -232,8 +174,7 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
                         last_sinked_relay = True
                         last_relay = True
                     elif len(forbidden_sinked_relays) != 0:
-                        a, function_counter = closest_relay(sink, candidate_slots[i], sinked_relays,
-                                                            forbidden_sinked_relays)
+                        a = random.choice(sinked_relays)
                         for k in range(len(forbidden_sinked_relays)):
                             if math.dist(candidate_slots[i], forbidden_sinked_relays[k][0]) < 30:
                                 last_relay_forbidden = True
@@ -249,8 +190,7 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
                 # If a candidate have a nearby covered sink and sinked_relay then we declare that there is at least a
                 # candidate who arrived
                 elif math.dist(sink, candidate_slots[i]) < 30 and math.dist(candidate_slots[i], a[0]) < 30:
-                    a, function_counter = closest_relay(sink, candidate_slots[i], sinked_relays,
-                                                        forbidden_sinked_relays)
+                    a = random.choice(sinked_relays)
                     last_sinked_relay = True
                     last_sink = True
                     last_relay = True
@@ -293,8 +233,7 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
                 min1 = math.dist(candidate_slots[index_array[0]], sink)
 
                 # min2 is minimum distance between candidate and sinked_relays
-                a, useless_variable = closest_relay(sink, candidate_slots[index_array[0]], sinked_relays,
-                                                    forbidden_sinked_relays)
+                a = random.choice(sinked_relays)
                 min2 = math.dist(candidate_slots[index_array[0]], a[0])
                 chosen_sinked_relay = a
 
@@ -305,8 +244,7 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
                 for i in range(len(index_array)):
 
                     # Choose the best candidate that's near the closest sinked_relay
-                    a, useless_variable = closest_relay(sink, candidate_slots[index_array[i]], sinked_relays,
-                                                        forbidden_sinked_relays)
+                    a = random.choice(sinked_relays)
                     if math.dist(candidate_slots[index_array[i]], a[0]) < min2:
                         min2 = math.dist(candidate_slots[index_array[i]], a[0])
                         current_chosen_candidate = candidate_slots[index_array[i]]
@@ -366,12 +304,10 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
 
         # If candidate_slots are near a sinked_relays ONLY then assign them to sinked_candidates
         elif last_sink == False and last_relay == True:
-            for i in range(len(candidate_slots)):
-                a, useless_variable = closest_relay(sink, candidate_slots[i], sinked_relays,
-                                                    forbidden_sinked_relays)
-                if math.dist(a[0], candidate_slots[i]) < 30:
-                    sinked_candidates.append(candidate_slots[i])
-                    sinked_counter_array.append(counter_array[i])
+            for i in range(int(len(candidate_slots) / 2)):
+                a = random.choice(sinked_relays)
+                sinked_candidates.append(candidate_slots[i])
+                sinked_counter_array.append(counter_array[i])
 
             # Choose the sinked_candidate with the highest value of free_slots (if tied then choose candidate closest to
             # sink or sinked relay)
@@ -391,8 +327,7 @@ def best_neighbor(sink, sinked_relays, candidate_slots, free_slots, current_sink
                         min_distance = sinked_candidates[i]
                         max = sinked_counter_array[i]
                         index = i
-            a, useless_variable = closest_relay(sink, sinked_candidates[index], sinked_relays,
-                                                forbidden_sinked_relays)
+            a = random.choice(sinked_relays)
 
         # If candidate_slots are near a sink AND sinked_relays then assign them to sinked_candidates
         elif last_sink == True and last_relay == True:

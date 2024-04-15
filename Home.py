@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 import json
@@ -12,15 +13,16 @@ from PersonalModules.UCB_VND import UCB_VND
 from PersonalModules.Upper_Confidence_Bound import plot_histogram
 from PersonalModules.VND import Variable_Neighborhood_Descent
 from PersonalModules.greedy import greedy_algorithm
-from PersonalModules.utilities import bellman_ford, display, get_stat
+from PersonalModules.utilities import bellman_ford, display, get_stat, len_free_slots, len_sinked_relays, sentinel_relay
 from PersonalModules.vns import Variable_Neighborhood_Search
 from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, save2
 
 def get_Diameter(sentinel_bman, cal_bman, mesh_size):
+    sentinel_relays = sentinel_relay(sentinel_bman)
     if 999 in sentinel_bman:
         return cal_bman/mesh_size
     else:
-        return max(sentinel_bman)
+        return max(sentinel_relays)
 
 def createEverything(chosen_grid, sink_location, mesh_size):
     free_slots = []
@@ -33,13 +35,17 @@ def createEverything(chosen_grid, sink_location, mesh_size):
         elif (chosen_grid % 2) == 1:
             sink = (((grid - mesh_size) / 2) + 10, ((grid - mesh_size) / 2) + 10)
     elif sink_location == 'Top Left':
-        sink = (grid - (mesh_size*2 + mesh_size/2), grid - (mesh_size*2 + mesh_size/2))
-    elif sink_location == 'Top Right':
         sink = (mesh_size*2 + mesh_size/2, grid - (mesh_size*2 + mesh_size/2))
+    elif sink_location == 'Top Right':
+        sink = (grid - (mesh_size*2 + mesh_size/2), grid - (mesh_size*2 + mesh_size/2))
     elif sink_location == 'Bottom Left':
-        sink = (mesh_size*2 + mesh_size/2, mesh_size*2 + mesh_size/2)               
+        sink = (mesh_size*2 + mesh_size/2, mesh_size*2 + mesh_size/2)       
     elif sink_location == 'Bottom Right':
-        sink = (grid - (mesh_size*2 + mesh_size/2), mesh_size*2 + mesh_size/2)  
+        sink = (grid - (mesh_size*2 + mesh_size/2), mesh_size*2 + mesh_size/2)            
+
+    mesh_number = ((sink[0] - 10) // 20) + ((sink[1] - 10) // 20) * chosen_grid + 1
+    print(f'Mesh number: {mesh_number}')
+    print(f'Sink coordinate: {sink}')
 
     # Create sentinels
     sinkless_sentinels = [(x, 10) for x in range(10, grid + 10, 20)] + \
@@ -75,6 +81,7 @@ class MyApplication(QWidget):
         self.grid_size_input = QLineEdit()
         self.mesh_size_label = QLabel('Mesh Size:')
         self.mesh_size_input = QLineEdit()
+        self.mesh_size_input.setPlaceholderText('20')
         self.range_label = QLabel('Communication Range:')
         self.range_input = QLineEdit()
         self.range_input.setPlaceholderText('30')
@@ -176,7 +183,7 @@ class MyApplication(QWidget):
     
     def run_application(self):
         chosen_grid = int(self.grid_size_input.text())
-        mesh_size = int(self.mesh_size_input.text())
+        mesh_size = int(self.mesh_size_input.text() or 20)
         custom_range = int(self.range_input.text() or 30)
         sensing_range = int(self.sens_range_input.text() or 15)
         user_input = int(self.Number_of_executions_input.text() or 1)
@@ -189,14 +196,17 @@ class MyApplication(QWidget):
         if get_in:
             grid, sink, sinkless_sentinels, free_slots = createEverything(chosen_grid, sink_location, mesh_size)
             max_hops_number = grid
+            sentinel_relay = []
             self.output_text.append("Everything got created Succesfully !\n")
 
         if self.execution_type_radio_button_0.isChecked():
             self.output_text.append("You chose One time VNS ! \n")
 
             self.output_text.append("\n   Starting Genetic algorithm...")
+            start_time = time.time()
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(10, 15, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            #sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
@@ -204,7 +214,8 @@ class MyApplication(QWidget):
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
                                                                 sinked_sentinels)
             performance_before, relays_before, hops_before = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta) 
-            diameter_before = get_Diameter(sentinel_bman, cal_bman, mesh_size)                     
+            diameter_before = get_Diameter(sentinel_bman, cal_bman, mesh_size) 
+            relays_before = len_sinked_relays(sinked_relays)                    
             self.output_text.append("   Calculations are done !")
 
             self.output_text.append(f'\n Fitness BEFORE: {performance_before}')
@@ -224,7 +235,13 @@ class MyApplication(QWidget):
             performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
             #diameter_after = round(cal_bman / mesh_size)
             diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size)
+            relays_after = len_sinked_relays(sinked_relays)
             self.output_text.append("   Calculations are done !")
+            end_time = time.time()
+            total_time = int(end_time - start_time)
+            hours, remainder = divmod(total_time, 3600)
+            minutes, remainder = divmod(remainder, 60)
+            time_string = f"{hours:02.0f}H_{minutes:02.0f}M_{remainder:02.0f}S"
 
             self.output_text.append(f"\nFitness BEFORE: {performance_before}")
             self.output_text.append(f"Fitness AFTER: {performance_after}\n")
@@ -238,9 +255,15 @@ class MyApplication(QWidget):
             self.output_text.append(f"Hops Average BEFORE: {hops_before}")
             self.output_text.append(f"Hops Average AFTER: {hops_after}\n")
 
+            self.output_text.append(f'Execution time: {time_string}\n')
+
             display(grid, sink, sinked_relays, sinked_sentinels, title="VND Algorihtm")
 
             self.output_text.append("\n Another execution ! \n")
+
+            print(f'\nThe final solution: {len_sinked_relays(sinked_relays)} relays deployed: {sinked_relays}')
+            print(f'The final solution: {len_free_slots(grid, sinked_relays)} free slots remaining\n\n')
+            print(f'The final sentinel list solution: {sentinel_bman}')
 
         elif self.execution_type_radio_button_1.isChecked():
             Solutions_Data = []
@@ -281,7 +304,8 @@ class MyApplication(QWidget):
             while executions <= user_input:
                 grid, sink, sinkless_sentinels, free_slots = createEverything(chosen_grid, sink_location, mesh_size)
                 genetic_sinked_sentinels, genetic_sinked_relays, genetic_free_slots, Finished, ERROR = genetic_algorithm(3, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
-                Greedy_grid_data = [grid, sink, genetic_sinked_relays, genetic_sinked_sentinels]
+                
+                #Greedy_grid_data = [grid, sink, genetic_sinked_relays, genetic_sinked_sentinels]
                 self.output_text.append("   Genetic algorithm finished execution successfully !")
 
                 # Get the performance before VNS, perform VNS then Get the performance after VNS
@@ -319,6 +343,7 @@ class MyApplication(QWidget):
                                                                     sinked_sentinels)
                 performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
                 diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size)
+                relays_after = len_sinked_relays(sinked_relays)
                 self.output_text.append("   Calculations are done !")
 
                 display(grid, sink, sinked_relays, sinked_sentinels, title=f"{get_ordinal_number(executions)} VND Algorihtm")
@@ -349,17 +374,17 @@ class MyApplication(QWidget):
 
             self.output_text.append('GA Results AVERAGE:')
 
-            self.output_text.append(f'Relays AVERAGE: {round(ga_avg_relays / user_input)}')
-            self.output_text.append(f'Hops AVERAGE: {round(ga_avg_hops / user_input)}')
+            self.output_text.append(f'Relays AVERAGE: {math.ceil(ga_avg_relays / user_input)}')
+            self.output_text.append(f'Hops AVERAGE: {math.ceil(ga_avg_hops / user_input)}')
             self.output_text.append(f'Performance AVERAGE: {ga_avg_performance / user_input}')
-            self.output_text.append(f'Diameter AVERAGE: {round(ga_avg_diameter / user_input)}')
+            self.output_text.append(f'Diameter AVERAGE: {math.ceil(ga_avg_diameter / user_input)}')
             
             self.output_text.append('\nVNS Results AVERAGE:')
 
-            self.output_text.append(f'Relays AVERAGE: {round(vns_avg_relays / user_input)}')
-            self.output_text.append(f'Hops AVERAGE: {round(vns_avg_hops / user_input)}')
+            self.output_text.append(f'Relays AVERAGE: {math.ceil(vns_avg_relays / user_input)}')
+            self.output_text.append(f'Hops AVERAGE: {math.ceil(vns_avg_hops / user_input)}')
             self.output_text.append(f'Performance AVERAGE: {vns_avg_performance / user_input}')
-            self.output_text.append(f'Diameter AVERAGE: {round(vns_avg_diameter / user_input)}')
+            self.output_text.append(f'Diameter AVERAGE: {math.ceil(vns_avg_diameter / user_input)}')
 
             end_time = time.time()
             total_time = int(end_time - start_time)
@@ -367,7 +392,13 @@ class MyApplication(QWidget):
             minutes, remainder = divmod(remainder, 60)
             time_string = f"{hours:02.0f}H_{minutes:02.0f}M_{remainder:02.0f}S"
 
-            self.output_text.append(f'\nTotal execution time: {time_string}')
+            avg_execution_time = total_time / user_input
+            avg_hours, avg_remainder = divmod(avg_execution_time, 3600)
+            avg_minutes, avg_remainder = divmod(avg_remainder, 60)
+            avg_time_string = f"{avg_hours:02.0f}H_{avg_minutes:02.0f}M_{avg_remainder:02.0f}S"
+
+            self.output_text.append(f'\nExecution time AVERAGE: {avg_time_string}')
+            self.output_text.append(f'Total execution time: {time_string}')
 
         elif self.execution_type_radio_button_2.isChecked():
             '''folder_path = "C:/Users/nouri/OneDrive/Desktop/Papers/Solutions"
