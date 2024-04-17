@@ -17,7 +17,6 @@ import random
 
 from matplotlib import pyplot as plt
 import numpy as np
-from PersonalModules.utilities import bellman_ford, epsilon_constraints
 
 '''
 Visualizing the results
@@ -57,19 +56,19 @@ def Credit_Assignment(improvement, previous, after, l):
 
     if improvement:
         if l == 0 or l == 4:
-            return 2 * Rs 
+            return 20 * Rs 
         elif l == 1:
-            return 4 * Rs
+            return 40 * Rs
         elif l == 2:
-            return 3 * Rs
+            return 30 * Rs
         elif l == 3:
-            return 2.5 * Rs
+            return 25 * Rs
     else:
-        Penalty = -(Rs * 3)
+        Penalty = -(Rs * 30)
         return Penalty
 
 # UCB1 policy implementation ---------------------------------------------------------------------------------------------------------------------------
-def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta, improvement, qualities, exploration_factor):
+def UCB1_policy(lmax, qualities, exploration_factor, total_actions):
     """
     Applies UCB1 policy to generate neighborhood recommendations.
 
@@ -103,7 +102,6 @@ def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_
             exploration_term = exploration_factor * math.sqrt((2 * math.log(total_action_count)) / action_count)
             return quality + exploration_term
     
-    total_actions = 0
     action_counts = [0] * lmax
     neighborhoods_selected = []
 
@@ -129,6 +127,6 @@ def UCB1_policy(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_
     # Update qualities[chosen_neighborhood] based on fitness improvement or other metrics
 
     # Plot the selection results
-    plot_histogram(neighborhoods_selected)
+    #plot_histogram(neighborhoods_selected)
     
     return chosen_neighborhood

@@ -513,85 +513,47 @@ def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels,
     else:
         return performance
 
-def bellman_ford_parallel_worker(queue, grid, sink, relays, sentinels, start, custom_range):
-    chosen_grid = int(grid / 20)
-    meshes = chosen_grid * chosen_grid
-    for i in range(meshes):
-        x = (i % chosen_grid) * 20 + (20 / 2)
-        y = (i // chosen_grid) * 20 + (20 / 2)
-        if (x, y) == sink:
-            start = i
-            break
-
-    # O(n^2) complexity for this part
-    # Create adjacency matrix
-    graph = [[0 for j in range(meshes)] for i in range(meshes)]
-    extra_array = [sink]
-    extra_array.extend(sentinels)
-    for a in range(len(relays)):
-        extra_array.append(relays[a][0])
-    for i in range(meshes):
-        for j in range(meshes):
-            xi = (i % chosen_grid) * 20 + (20 / 2)
-            yi = (i // chosen_grid) * 20 + (20 / 2)
-            xj = (j % chosen_grid) * 20 + (20 / 2)
-            yj = (j // chosen_grid) * 20 + (20 / 2)
-            if i != j:
-                if (xi, yi) in extra_array and (xj, yj) in extra_array:
-                    if (xi, yi) in sentinels and (xj, yj) in sentinels:
-                        pass
-                    else:
-                        if math.dist((xi, yi), (xj, yj)) < custom_range:
-                            graph[i][j] = 1
-
-    INF = float('inf')
-
-    # Initialize distance array with infinity for all vertices except the start vertex
-    n = len(graph)
-    dist = [INF] * n
+def bellman_ford_parallel_worker(queue, chosen_grid, meshes, start, relays, sentinels):
+    dist = [math.inf] * meshes
     dist[start] = 0
 
-    # O((n-1)*n*n) => O(n^3)
-    # Relax edges repeatedly
-    for _ in range(n - 1):
-        for u in range(n):
-            for v in range(n):
-                if graph[u][v] != 0:  # If there's an edge between u and v
-                    if dist[u] + graph[u][v] < dist[v]:  # If a shorter path to v is found through u
-                        dist[v] = dist[u] + graph[u][v]
+    for _ in range(meshes):
+        for u in range(meshes):
+            for v in range(meshes):
+                if relays[u][0] == relays[v][0] and relays[u][1] == relays[v][1]:
+                    if dist[u] + 1 < dist[v]:
+                        dist[v] = dist[u] + 1
 
     # Acquire distances of only sentinels and calculate the sum of them
     sentinel_bman = []
     cal_bman = 0
-    # Complexity O(meshes) => O(n)
     for i in range(meshes):
-        xi = (i % chosen_grid) * 20 + (20 / 2)
-        yi = (i // chosen_grid) * 20 + (20 / 2)
-        if (xi, yi) in sentinels:
-            if dist[i] == INF:  # Check if a sentinel is unreachable
+        if sentinels[i][0] == sentinels[i][0] and sentinels[i][1] == sentinels[i][1]:
+            if dist[i] == math.inf:  # Check if a sentinel is unreachable
                 sentinel_bman.append(999)  # Set distance to 0 if unreachable
                 cal_bman += 999
             else:
                 sentinel_bman.append(dist[i])
                 cal_bman += dist[i]
 
-    # total complexity is O(n^3) as the bellman_ford algorithm dictate
     queue.put((dist, sentinel_bman, cal_bman))
 
-def bellman_ford_parallel(grid, sink, relays, sentinels, custom_range):
-    num_processes = 3  # Number of processes to run in parallel
+def bellman_ford_parallel(grid, relays, sentinels):
+    num_processes = 4  # Number of processes to run in parallel
     queue = Queue()
     processes = []
 
-    # Split the work among processes
+    # Construct the graph
     chosen_grid = int(grid / 20)
     meshes = chosen_grid * chosen_grid
+
+    # Split the work among processes
     chunk_size = (meshes + num_processes - 1) // num_processes
 
     for i in range(num_processes):
         start_index = i * chunk_size
         end_index = min((i + 1) * chunk_size, meshes)
-        process = Process(target=bellman_ford_parallel_worker, args=(queue, grid, sink, relays, sentinels, start_index, custom_range))
+        process = Process(target=bellman_ford_parallel_worker, args=(queue, chosen_grid, meshes, start_index, relays, sentinels))
         processes.append(process)
 
     # Start processes
