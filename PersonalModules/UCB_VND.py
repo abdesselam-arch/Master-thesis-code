@@ -79,12 +79,12 @@ def delete_relay_next_to_sentinel(sentinels, sinked_relays, free_slots, remember
     
     return free_slots, sinked_relays, performed_action, remember_used_relays
 
-def relocate_relay(sentinels, sinked_relays, free_slots, remember_used_relays):
+def relocate_relay(sinked_sentinels, sink, sinked_relays, free_slots, remember_used_relays, custom_range, mesh_size):
     performed_action = []
     
     if sinked_relays and free_slots:
         # Choose a relay and a free slot randomly
-        relay_index = random.randint(0, len(sinked_relays) - 1)
+        '''relay_index = random.randint(0, len(sinked_relays) - 1)
         free_slot_index = random.randint(0, len(free_slots) - 1)
         
         # Swap the positions of the relay and the free slot
@@ -94,6 +94,10 @@ def relocate_relay(sentinels, sinked_relays, free_slots, remember_used_relays):
         free_slots[free_slot_index] = relay_position
         sinked_relays = [relay for relay in sinked_relays if relay[0] != relay_position]
 
+        # Update the performed action to reflect the swap
+        performed_action = [2, "(LS) Swap relay with free slot"]'''
+        free_slots, sinked_relays, action, remember_used_relays = delete_random_relay(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
+        free_slots, sinked_relays, action, remember_used_relays = add_next_to_relay(sinked_sentinels, sink, sinked_relays, free_slots, [], custom_range, mesh_size)
         # Update the performed action to reflect the swap
         performed_action = [2, "(LS) Swap relay with free slot"]
     
@@ -167,7 +171,7 @@ def shaking(sinked_sentinels, sinked_relays, free_slots, custom_range, sink, mes
             free_slots, sinked_relays, action, remember_used_relays = delete_relay_next_to_sentinel(sinked_sentinels, sinked_relays, free_slots, [], custom_range)
         if shaking_neighborhood == 4:
             # 4th neighborhood
-            free_slots, sinked_relays, action, remember_used_relays = relocate_relay(sinked_sentinels, sinked_relays, free_slots, [])
+            free_slots, sinked_relays, action, remember_used_relays = relocate_relay(sinked_sentinels, sink, sinked_relays, free_slots, [], custom_range, mesh_size)
         if shaking_neighborhood == 5:
             # 5th neighborhood
             free_slots, sinked_relays, action, remember_used_relays = add_relay_next_to_sentinel(sinked_sentinels, sink, sinked_relays, free_slots, [], custom_range, mesh_size)
@@ -238,7 +242,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
                 print('Relay next to sentinel deleted')
             
             elif l == 3:
-                n_free_slots, n_sinked_relays, action, remember_used_relays = relocate_relay(sinked_sentinels, sinked_relays, free_slots, [])
+                n_free_slots, n_sinked_relays, action, remember_used_relays = relocate_relay(sinked_sentinels, sink, sinked_relays, free_slots, [], custom_range, mesh_size)
                 print('Relays relocated')
             
             elif l == 4:
@@ -249,7 +253,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
             after = epsilon_constraints(grid, n_free_slots, sink, n_sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta)
             total_number_actions += 1
 
-            if after < previous and 999 not in sentinel_bman:
+            if (after < previous) and (sentinel_bman.count(999) == 0):
                 print(f'\nPrevious Fitness: {previous}, After Fitness: {after}')
                 free_slots, sinked_relays = n_free_slots, n_sinked_relays
                 improvement = True
