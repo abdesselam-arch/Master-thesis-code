@@ -56,6 +56,12 @@ def get_ordinal_number(n):
             suffix = "th"
     return str(n) + suffix
 
+def isPrime(x):
+    import matlab.engine
+    eng = matlab.engine.start_matlab()
+    tf = eng.isprime(x)
+    return tf
+
 def main():
     get_in = True
     # Create everything

@@ -205,7 +205,7 @@ class MyApplication(QWidget):
             self.output_text.append("\n   Starting Genetic algorithm...")
             start_time = time.time()
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(10, 5, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(8, 15, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             #sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 

@@ -1,9 +1,10 @@
 import math
 import random
 
+from matplotlib import pyplot as plt
 import numpy as np
 
-from PersonalModules.utilities import bellman_ford, epsilon_constraints, len_free_slots, len_sinked_relays
+from PersonalModules.utilities import bellman_ford, bellman_ford_parallel, epsilon_constraints, len_free_slots, len_sinked_relays
 from PersonalModules import Upper_Confidence_Bound
 from main import get_ordinal_number
 
@@ -27,7 +28,7 @@ def add_next_to_relay(sentinels, sink, sinked_relays, free_slots, remember_used_
         chosen_random_slot = random.choice(candidate_slots)
         # sinked_relays.append((chosen_random_slot, (abs(sink[0] - chosen_random_slot[0]) + abs(sink[1] - chosen_random_slot[1])) / mesh_size))
         # sinked_relays.append((chosen_random_slot, 1))
-        sinked_relays.append((chosen_random_slot, hop_count(sink, chosen_random_slot, sinked_relays)))
+        sinked_relays.append((chosen_random_slot, hop_count(sink, chosen_random_slot, sentinels)))
         performed_action = [1, chosen_random_slot, "(P) Add a relay next to a random connected relay's neighborhood."]
         free_slots.remove(chosen_random_slot)
         remember_used_relays.append(chosen_random_slot)
@@ -119,7 +120,7 @@ def add_relay_next_to_sentinel(sentinels, sink, sinked_relays, free_slots, remem
                 chosen_slot = random.choice(candidate_slots)
                 # sinked_relays.append((chosen_slot, (abs(sink[0] - chosen_slot[0]) + abs(sink[1] - chosen_slot[1])) / mesh_size))
                 # sinked_relays.append((chosen_slot, 1))
-                sinked_relays.append((chosen_slot, hop_count(sink, chosen_slot, sinked_relays)))
+                sinked_relays.append((chosen_slot, hop_count(sink, chosen_slot, sentinels)))
                 performed_action = [1, chosen_slot, "(P) Add a relay next to a sentinel with no relay neighbors."]
                 free_slots.remove(chosen_slot)
                 remember_used_relays.append(chosen_slot)
@@ -178,7 +179,7 @@ def shaking(sinked_sentinels, sinked_relays, free_slots, custom_range, sink, mes
     print('Shaking operation done!')
     return free_slots, sinked_relays, action, remember_used_relays
 
-def hop_count(sink, relay, sinked_relays):
+def hop_count(sink, relay, sentinels):
     current_position = relay
     hop_count = 0
     # Iterate until the current position reaches the sink
@@ -188,7 +189,7 @@ def hop_count(sink, relay, sinked_relays):
                      (current_position[0] - 1, current_position[1]),
                      (current_position[0], current_position[1] + 1),
                      (current_position[0], current_position[1] - 1)]
-        # neighbors = [neighbor for neighbor in neighbors if neighbor in [position[0] for position in sinked_relays]]
+        neighbors = [neighbor for neighbor in neighbors if neighbor not in [position for position in sentinels]]
         # Calculate distances to each neighbor
         distances = [abs(sink[0] - neighbor[0]) + abs(sink[1] - neighbor[1]) for neighbor in neighbors]
         # Choose the neighbor with the minimum distance to the sink
@@ -196,6 +197,24 @@ def hop_count(sink, relay, sinked_relays):
         current_position = neighbors[min_index]
         hop_count += 1
     return int(hop_count/20)
+
+def plot_histogram(neighborhoods_selected):
+    """
+    Plot a histogram of neighborhoods selections.
+
+    Args:
+        neighborhoods_selected (list): List of neighborhoods selected by the algorithm.
+
+    Returns:
+        None
+    """
+    # Count the occurrences of each neighborhood
+    neighborhood_counts = [neighborhoods_selected.count(i) for i in range(len(neighborhoods_selected))]
+    plt.hist(neighborhood_counts)
+    plt.title('Histogram of Neighborhoods selections')
+    plt.xlabel('Neighborhoods')
+    plt.ylabel('Number of times each neighborhood was selected by the algorithm')
+    plt.show()
 
 # UCB1 - Variable Neighborhood Descent ---------------------------------------------------------------------------
 def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta):
@@ -223,9 +242,11 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
         improvement = True  # Flag to indicate improvement
 
         distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
+        print(f'Previous sentinel_bman: {sentinel_bman}')
+        # sentinel_bman, cal_bman = bellman_ford_parallel(grid, free_slots, sink, sinked_relays, sinked_sentinels)
         previous = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta)
         
-        l = Upper_Confidence_Bound.UCB1_policy(lmax, qualities, 2, total_number_actions)
+        l, neighborhood_count = Upper_Confidence_Bound.UCB1_policy(lmax, qualities, 2, total_number_actions)
         while improvement and i < len(sinked_relays) + 1:
             improvement = False
             i += 1
@@ -257,10 +278,8 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
                 print(f'\nPrevious Fitness: {previous}, After Fitness: {after}')
                 free_slots, sinked_relays = n_free_slots, n_sinked_relays
                 improvement = True
-
                 # Update the qualities[] of the chosen neighborhoods - Rewarding the best Action
-                qualities[l] += Upper_Confidence_Bound.Credit_Assignment(improvement, previous, after, l) # / total_reward
-                # total_reward += Upper_Confidence_Bound.Credit_Assignment(improvement, previous, after, l)
+                qualities[l] += Upper_Confidence_Bound.Credit_Assignment(improvement, previous, after, l) / neighborhood_count 
                 previous = after
 
                 if after < best_solution_relays:
@@ -281,7 +300,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
         print(f'\nThere are {len_sinked_relays(sinked_relays)} relays deployed')
         print(f'There are {len_free_slots(grid, sinked_relays)} free slots remaining\n\n')
 
-        distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-        print(f'UCB_VND Sentinel: {sentinel_bman}')
+        '''distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
+        print(f'UCB_VND Sentinel: {sentinel_bman}')'''
 
     return optimal_sinked_relays, optimal_free_slots

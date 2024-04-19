@@ -6,6 +6,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
+import matlab.engine
 
 def get_Diameter(sentinel_bman, cal_bman, mesh_size):
     sentinel_relays = sentinel_relay(sentinel_bman)
@@ -513,65 +514,117 @@ def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels,
     else:
         return performance
 
-def bellman_ford_parallel_worker(queue, chosen_grid, meshes, start, relays, sentinels):
-    dist = [math.inf] * meshes
-    dist[start] = 0
+def bellman_ford_worker(queue, sentinel_indices, graph, chosen_grid, sentinels):
+    INF = float('inf')
+    n = len(graph)
+    dist = [INF] * n
 
-    for _ in range(meshes):
-        for u in range(meshes):
-            for v in range(meshes):
-                if relays[u][0] == relays[v][0] and relays[u][1] == relays[v][1]:
-                    if dist[u] + 1 < dist[v]:
-                        dist[v] = dist[u] + 1
+    for i in sentinel_indices:
+        dist[i] = 0
 
-    # Acquire distances of only sentinels and calculate the sum of them
+    for _ in range(n - 1):
+        for u in sentinel_indices:
+            for v in range(n):
+                if graph[u][v] != 0:
+                    if dist[u] + graph[u][v] < dist[v]:
+                        dist[v] = dist[u] + graph[u][v]
+
     sentinel_bman = []
     cal_bman = 0
-    for i in range(meshes):
-        if sentinels[i][0] == sentinels[i][0] and sentinels[i][1] == sentinels[i][1]:
-            if dist[i] == math.inf:  # Check if a sentinel is unreachable
-                sentinel_bman.append(999)  # Set distance to 0 if unreachable
+    for i in sentinel_indices:
+        xi = (i % chosen_grid) * 20 + (20 / 2)
+        yi = (i // chosen_grid) * 20 + (20 / 2)
+        if (xi, yi) in sentinels:
+            if dist[i] == INF:
+                sentinel_bman.append(999)
                 cal_bman += 999
             else:
                 sentinel_bman.append(dist[i])
                 cal_bman += dist[i]
 
-    queue.put((dist, sentinel_bman, cal_bman))
+    queue.put((sentinel_bman, cal_bman))
 
-def bellman_ford_parallel(grid, relays, sentinels):
-    num_processes = 4  # Number of processes to run in parallel
-    queue = Queue()
-    processes = []
-
-    # Construct the graph
+def bellman_ford_parallel(grid, free_slots, sink, relays, sentinels):
     chosen_grid = int(grid / 20)
     meshes = chosen_grid * chosen_grid
 
-    # Split the work among processes
-    chunk_size = (meshes + num_processes - 1) // num_processes
+    graph = [[0 for _ in range(meshes)] for _ in range(meshes)]
+    extra_array = [sink]
+    extra_array.extend(sentinels)
+    for relay, _ in relays:
+        extra_array.append(relay)
+    for i in range(meshes):
+        for j in range(meshes):
+            xi = (i % chosen_grid) * 20 + (20 / 2)
+            yi = (i // chosen_grid) * 20 + (20 / 2)
+            xj = (j % chosen_grid) * 20 + (20 / 2)
+            yj = (j // chosen_grid) * 20 + (20 / 2)
+            if i != j:
+                if (xi, yi) in extra_array and (xj, yj) in extra_array:
+                    if (xi, yi) in sentinels and (xj, yj) in sentinels:
+                        pass
+                    else:
+                        if math.dist((xi, yi), (xj, yj)) < 30:
+                            graph[i][j] = 1
+
+    num_processes = 4
+    queue = Queue()
+    processes = []
+
+    sentinel_indices = [i for i in range(meshes) if (i % chosen_grid == 0 or i % chosen_grid == chosen_grid - 1 or i < chosen_grid or i >= meshes - chosen_grid)]
+
+    chunk_size = len(sentinel_indices) // num_processes
 
     for i in range(num_processes):
         start_index = i * chunk_size
-        end_index = min((i + 1) * chunk_size, meshes)
-        process = Process(target=bellman_ford_parallel_worker, args=(queue, chosen_grid, meshes, start_index, relays, sentinels))
+        end_index = start_index + chunk_size if i < num_processes - 1 else len(sentinel_indices)
+        process = Process(target=bellman_ford_worker, args=(queue, sentinel_indices[start_index:end_index], graph, chosen_grid, sentinels))
         processes.append(process)
 
-    # Start processes
     for process in processes:
         process.start()
 
-    # Wait for processes to finish
     for process in processes:
         process.join()
 
-    # Merge results
-    distances = []
     sentinel_distances = []
     cal_bman = 0
     for _ in range(num_processes):
-        dist, sentinel_bman, partial_cal_bman = queue.get()
-        distances.extend(dist)
+        sentinel_bman, partial_cal_bman = queue.get()
         sentinel_distances.extend(sentinel_bman)
         cal_bman += partial_cal_bman
 
-    return distances, sentinel_distances, cal_bman
+    return sentinel_distances, cal_bman
+
+
+def floyd_warshall_paths_matlab(grid, sink, sentinels, relays):
+
+    chosen_grid = int(grid / 20)
+    meshes = chosen_grid * chosen_grid
+
+    # Creating the graph using the 
+    graph = [[0 for _ in range(meshes)] for _ in range(meshes)]
+    extra_array = [sink]
+    extra_array.extend(sentinels)
+    for relay, _ in relays:
+        extra_array.append(relay)
+    for i in range(meshes):
+        for j in range(meshes):
+            xi = (i % chosen_grid) * 20 + (20 / 2)
+            yi = (i // chosen_grid) * 20 + (20 / 2)
+            xj = (j % chosen_grid) * 20 + (20 / 2)
+            yj = (j // chosen_grid) * 20 + (20 / 2)
+            if i != j:
+                if (xi, yi) in extra_array and (xj, yj) in extra_array:
+                    if (xi, yi) in sentinels and (xj, yj) in sentinels:
+                        pass
+                    else:
+                        if math.dist((xi, yi), (xj, yj)) < 30:
+                            graph[i][j] = 1
+
+    eng = matlab.engine.start_matlab()
+    adj_max_matlab = matlab.double(graph)
+    D, P = eng.FloydSPR2(adj_max_matlab, nargout=2)
+    eng.quit()
+    
+    return np.array(D), np.array(P)

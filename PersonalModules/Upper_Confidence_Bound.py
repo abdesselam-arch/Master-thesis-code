@@ -99,7 +99,7 @@ def UCB1_policy(lmax, qualities, exploration_factor, total_actions):
             '''
             return random.randint(1, 5)
         else:                        
-            exploration_term = exploration_factor * math.sqrt((2 * math.log(total_action_count)) / action_count)
+            exploration_term = exploration_factor * math.sqrt((2 * math.log(total_action_count)) / (action_count + 1))
             return quality + exploration_term
     
     action_counts = [0] * lmax
@@ -129,4 +129,4 @@ def UCB1_policy(lmax, qualities, exploration_factor, total_actions):
     # Plot the selection results
     #plot_histogram(neighborhoods_selected)
     
-    return chosen_neighborhood
+    return chosen_neighborhood, action_counts[chosen_neighborhood]
