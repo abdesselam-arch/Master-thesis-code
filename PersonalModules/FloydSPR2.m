@@ -31,6 +31,11 @@ function [D, P]=FloydSPR2(AdjMax)
             end
         end
     end
+
+    % disp('D:')
+    % disp(D)
+    % disp('P:')
+    % disp(P)
     
     
     %% END

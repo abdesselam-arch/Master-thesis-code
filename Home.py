@@ -10,10 +10,9 @@ import tabulate
 
 from PersonalModules.Genetic import genetic_algorithm
 from PersonalModules.UCB_VND import UCB_VND
-from PersonalModules.Upper_Confidence_Bound import plot_histogram
 from PersonalModules.VND import Variable_Neighborhood_Descent
 from PersonalModules.greedy import greedy_algorithm
-from PersonalModules.utilities import bellman_ford, display, get_stat, len_free_slots, len_sinked_relays, sentinel_relay
+from PersonalModules.utilities import bellman_ford, dijkstra, display, get_stat, len_free_slots, len_sinked_relays, sentinel_relay
 from PersonalModules.vns import Variable_Neighborhood_Search
 from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, save2
 
@@ -205,18 +204,18 @@ class MyApplication(QWidget):
             self.output_text.append("\n   Starting Genetic algorithm...")
             start_time = time.time()
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(8, 15, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
-            #sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = greedy_algorithm(sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(5, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
             self.output_text.append("\n   Please wait until some calculations are finished...")
-            distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays,
-                                                                sinked_sentinels)
+
+            distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
             performance_before, relays_before, hops_before = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta) 
             diameter_before = get_Diameter(sentinel_bman, cal_bman, mesh_size) 
             relays_before = len_sinked_relays(sinked_relays)                    
             self.output_text.append("   Calculations are done !")
+            print(f'\nGA sentinels: {sentinel_bman}')
 
             self.output_text.append(f'\n Fitness BEFORE: {performance_before}')
             self.output_text.append(f"\n Network diameter BEFORE: {diameter_before}")
@@ -231,7 +230,7 @@ class MyApplication(QWidget):
             self.output_text.append("   Variable Neighborhood Descent algorithm finished execution successfully !")
 
             self.output_text.append("\n   Please wait until some calculations are finished...")
-            distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
+
             performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
             #diameter_after = round(cal_bman / mesh_size)
             diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size)

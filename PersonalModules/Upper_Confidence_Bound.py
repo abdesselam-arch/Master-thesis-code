@@ -21,24 +21,6 @@ import numpy as np
 '''
 Visualizing the results
 '''
-def plot_histogram(neighborhoods_selected):
-    """
-    Plot a histogram of neighborhoods selections.
-
-    Args:
-        neighborhoods_selected (list): List of neighborhoods selected by the algorithm.
-
-    Returns:
-        None
-    """
-    # Count the occurrences of each neighborhood
-    neighborhood_counts = [neighborhoods_selected.count(i) for i in range(len(neighborhoods_selected))]
-    plt.hist(neighborhood_counts)
-    plt.title('Histogram of Neighborhoods selections')
-    plt.xlabel('Neighborhoods')
-    plt.ylabel('Number of times each neighborhood was selected by the algorithm')
-    plt.show()
-
 def Credit_Assignment(improvement, previous, after, l):
     '''
     Calculate credit (regret or reward) based on improvement.
@@ -56,12 +38,16 @@ def Credit_Assignment(improvement, previous, after, l):
 
     if improvement:
         if l == 0 or l == 4:
+            print(f'The reward {l}: {20 * Rs}')
             return 20 * Rs 
         elif l == 1:
+            print(f'The reward {l}: {20 * Rs}')
             return 40 * Rs
         elif l == 2:
+            print(f'The reward {l}: {20 * Rs}')
             return 30 * Rs
         elif l == 3:
+            print(f'The reward {l}: {20 * Rs}')
             return 25 * Rs
     else:
         Penalty = -(Rs * 30)
@@ -103,7 +89,6 @@ def UCB1_policy(lmax, qualities, exploration_factor, total_actions):
             return quality + exploration_term
     
     action_counts = [0] * lmax
-    neighborhoods_selected = []
 
     # Choose neighborhood using UCB1
     ucb_scores = [calculate_score(action_counts[i], total_actions, qualities[i]) for i in range(lmax)]
@@ -123,10 +108,5 @@ def UCB1_policy(lmax, qualities, exploration_factor, total_actions):
 
     # Update action counts and neighborhood qualities based on the outcome of the chosen action
     action_counts[chosen_neighborhood] += 1
-    neighborhoods_selected.append(chosen_neighborhood)
-    # Update qualities[chosen_neighborhood] based on fitness improvement or other metrics
-
-    # Plot the selection results
-    #plot_histogram(neighborhoods_selected)
     
     return chosen_neighborhood, action_counts[chosen_neighborhood]

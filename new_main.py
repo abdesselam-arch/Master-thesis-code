@@ -4,7 +4,7 @@ import time
 from Home import get_Diameter
 from PersonalModules.Genetic import genetic_algorithm
 from PersonalModules.UCB_VND import UCB_VND
-from PersonalModules.utilities import bellman_ford, get_stat, len_sinked_relays
+from PersonalModules.utilities import bellman_ford, display, get_stat, len_sinked_relays
 
 
 def create():
@@ -95,7 +95,7 @@ def main():
             start_time = time.time()
             # Generate the initial solution using greedy algorithm
             print("\n   Starting Genetic algorithm...")
-            genetic_sinked_sentinels, genetic_sinked_relays, genetic_free_slots, Finished, ERROR = genetic_algorithm(3, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range = 30, mesh_size = 20)
+            genetic_sinked_sentinels, genetic_sinked_relays, genetic_free_slots, Finished, ERROR = genetic_algorithm(5, 12, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range = 30, mesh_size = 20)
 
     
             print("   Greedy algorithm finished execution successfully !")
@@ -118,6 +118,7 @@ def main():
             ga_avg_performance += performance_before
             ga_avg_diameter += ga_diameter
 
+            display(grid, sink, sinked_relays, sinked_sentinels, title="Genetic Algorithm")
             print('Starting the UCB_VND algorithm now!!')
 
             sinked_relays, free_slots = UCB_VND(grid, sink, sinked_sentinels, sinked_relays,
@@ -127,10 +128,12 @@ def main():
             print("\n   Please wait until some calculations are finished...")
             distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
             
-            performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size = 20, alpha = 0.5, beta = 0.5)
+            performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size = 20, alpha = 0.7, beta = 0.3)
             
             diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size = 20)
             relays_after = len_sinked_relays(sinked_relays)
+
+            display(grid, sink, sinked_relays, sinked_sentinels, title="UCB VND Algorithm")
             print("   Calculations are done !")
 
             print(f"\nFitness BEFORE: {performance_before}")

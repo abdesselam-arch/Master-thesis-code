@@ -4,7 +4,7 @@ import math
 
 from matplotlib import pyplot as plt
 
-from PersonalModules.utilities import bellman_ford
+from PersonalModules.utilities import dijkstra
 
 def crossover(parent1, parent2):
     # Perform crossover between two parents using Uniform Crossover
@@ -52,7 +52,7 @@ def evaluate(solution, sink, sinked_relays, grid, free_slots, sinked_sentinels, 
     
     # Evaluate the fitness of the solution
     # Two objectives diameter, number of relays
-    distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
+    distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
     fitness = (0.3 * len(sinked_relays)) + (0.3 * (cal_bman / mesh_size))
     if 999 in sentinel_bman:
         return fitness + 999

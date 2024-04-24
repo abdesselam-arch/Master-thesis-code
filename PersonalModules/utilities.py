@@ -1,4 +1,5 @@
 from heapq import heappop, heappush
+import heapq
 import math
 from multiprocessing import Process, Queue
 import time
@@ -245,7 +246,7 @@ def bellman_ford(grid, free_slots, sink, relays, sentinels):
     graph = [[0 for j in range(meshes)] for i in range(meshes)]
     extra_array = [sink]
     extra_array.extend(sentinels)
-    for a in range(len(relays)):
+    for a in range(len_sinked_relays(relays)):
         extra_array.append(relays[a][0])
     for i in range(meshes):
         for j in range(meshes):
@@ -350,6 +351,7 @@ def floyd_warshall(grid, sink, relays, sentinels):
     return graph[start], sentinel_bman, cal_bman
 
 def dijkstra(grid, sink, relays, sentinels):
+    print('Dijkstra algorithm!')
     chosen_grid = int(grid / 20)
     meshes = chosen_grid * chosen_grid
     start = -1
@@ -367,9 +369,9 @@ def dijkstra(grid, sink, relays, sentinels):
     for a in range(len(relays)):
         extra_array.append(relays[a][0])
     for i in range(meshes):
+        xi = (i % chosen_grid) * 20 + (20 / 2)
+        yi = (i // chosen_grid) * 20 + (20 / 2)
         for j in range(meshes):
-            xi = (i % chosen_grid) * 20 + (20 / 2)
-            yi = (i // chosen_grid) * 20 + (20 / 2)
             xj = (j % chosen_grid) * 20 + (20 / 2)
             yj = (j // chosen_grid) * 20 + (20 / 2)
             if i != j:
@@ -378,37 +380,43 @@ def dijkstra(grid, sink, relays, sentinels):
                         pass
                     else:
                         if math.dist((xi, yi), (xj, yj)) < 30:
-                            graph[i].append((j, 1))  # Assuming edge weight as 1
+                            graph[i].append((j, 1))  # Assuming unit weight for all edges
 
-    # Apply Dijkstra's algorithm
-    dist = [math.inf] * meshes
+    INF = float('inf')
+
+    # Initialize distance array with infinity for all vertices except the start vertex
+    dist = [INF] * meshes
     dist[start] = 0
-    pq = [(0 + heuristic((start % chosen_grid) * 20 + (20 / 2), (start // chosen_grid) * 20 + (20 / 2), sink[0], sink[1]), start)]  # Include heuristic in priority calculation
 
+    # Priority queue to store vertices with their distances
+    pq = [(0, start)]
+
+    # Dijkstra's algorithm
     while pq:
-        d, u = heappop(pq)
+        d, u = heapq.heappop(pq)
         if d > dist[u]:
             continue
         for v, w in graph[u]:
             if dist[u] + w < dist[v]:
                 dist[v] = dist[u] + w
-                heappush(pq, (dist[v] + heuristic((v % chosen_grid) * 20 + (20 / 2), (v // chosen_grid) * 20 + (20 / 2), sink[0], sink[1]), v))  # Include heuristic in priority calculation
+                heapq.heappush(pq, (dist[v], v))
 
     # Acquire distances of only sentinels and calculate the sum of them
-    sentinel_dijkstra = []
-    cal_dijkstra = 0
+    sentinel_bman = []
+    cal_bman = 0
     for i in range(meshes):
         xi = (i % chosen_grid) * 20 + (20 / 2)
         yi = (i // chosen_grid) * 20 + (20 / 2)
         if (xi, yi) in sentinels:
-            if dist[i] == math.inf:  # Check if a sentinel is unreachable
-                sentinel_dijkstra.append(999)  # Set distance to 0 if unreachable
-                cal_dijkstra += 999
+            if dist[i] == INF:  # Check if a sentinel is unreachable
+                sentinel_bman.append(999)  # Set distance to 0 if unreachable
+                cal_bman += 999
             else:
-                sentinel_dijkstra.append(dist[i])
-                cal_dijkstra += dist[i]
+                sentinel_bman.append(dist[i])
+                cal_bman += dist[i]
 
-    return dist, sentinel_dijkstra, cal_dijkstra
+    return dist, sentinel_bman, cal_bman
+
 
 def bellman_ford_heuristic(grid, sink, relays, sentinels):
     chosen_grid = int(grid / 20)
@@ -503,10 +511,11 @@ def get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sin
     calculate_relays = len_sinked_relays(sinked_relays)
     return calculate_performance, calculate_relays, calculate_hops
 
-def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta):    
+def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta): 
+
+    distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
     
-    distance_bman, sentinel_bman, cal_bman = bellman_ford(grid, free_slots, sink, sinked_relays, sinked_sentinels)
-    #performance = ((alpha * len_sinked_relays(sinked_relays)) + (beta * (cal_bman/mesh_size)))
+    print(f'\nSentinel dijkstra: {sentinel_bman}\n')
     performance = ((alpha * len_sinked_relays(sinked_relays)) + (beta * (get_Diameter(sentinel_bman, cal_bman, mesh_size))))
 
     if 999 in sentinel_bman:
@@ -628,3 +637,60 @@ def floyd_warshall_paths_matlab(grid, sink, sentinels, relays):
     eng.quit()
     
     return np.array(D), np.array(P)
+
+
+def bellman_ford_matlab(grid, sink, relays, sentinels):
+    chosen_grid = int(grid / 20)
+    meshes = chosen_grid * chosen_grid
+    start = -1
+    for i in range(meshes):
+        x = (i % chosen_grid) * 20 + (20 / 2)
+        y = (i // chosen_grid) * 20 + (20 / 2)
+        if (x, y) == sink:
+            start = i
+            break
+
+    # Create adjacency matrix
+    graph = [[0 for _ in range(meshes)] for _ in range(meshes)]
+    extra_array = [sink]
+    extra_array.extend(sentinels)
+    for relay, _ in relays:
+        extra_array.append(relay)
+    for i in range(meshes):
+        for j in range(meshes):
+            xi = (i % chosen_grid) * 20 + (20 / 2)
+            yi = (i // chosen_grid) * 20 + (20 / 2)
+            xj = (j % chosen_grid) * 20 + (20 / 2)
+            yj = (j // chosen_grid) * 20 + (20 / 2)
+            if i != j:
+                if (xi, yi) in extra_array and (xj, yj) in extra_array:
+                    if (xi, yi) in sentinels and (xj, yj) in sentinels:
+                        pass
+                    else:
+                        if math.dist((xi, yi), (xj, yj)) < 30:
+                            graph[i][j] = 1
+
+    # Start MATLAB engine
+    eng = matlab.engine.start_matlab()
+
+    # Add the directory containing the MATLAB script to the MATLAB path
+    directory_path = 'C:/Users/nouri/OneDrive/Desktop/Papers/Python program files/Python program files/PersonalModules'
+    eng.addpath(directory_path)
+    
+    # Convert Python lists to MATLAB arrays
+    graph_matlab = matlab.double(graph)
+    # Convert Python tuples to a cell array in MATLAB
+    sentinels_cell = matlab.double(sentinels)
+    # print(sentinels_cell)
+
+    # Call MATLAB function
+    sentinel_bman_cell = eng.bellman_ford_mat(chosen_grid, meshes, start, graph_matlab, sentinels_cell)
+    
+    # Convert the MATLAB result to a Python list
+    sentinel_bman = [int(cell) if cell != 999 else 999 for cell in sentinel_bman_cell] 
+    cal_bman = max(sentinel_bman)
+    
+    # Stop MATLAB engine
+    eng.quit()    
+
+    return sentinel_bman, cal_bman
