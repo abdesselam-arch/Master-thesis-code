@@ -1,10 +1,9 @@
 import math
 import time
 
-from Home import get_Diameter
 from PersonalModules.Genetic import genetic_algorithm
 from PersonalModules.UCB_VND import UCB_VND
-from PersonalModules.utilities import bellman_ford, display, get_stat, len_sinked_relays
+from PersonalModules.utilities import bellman_ford, display, get_Diameter, get_stat, len_sinked_relays
 
 
 def create():

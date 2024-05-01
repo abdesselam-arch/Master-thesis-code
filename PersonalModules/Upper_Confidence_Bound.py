@@ -41,16 +41,16 @@ def Credit_Assignment(improvement, previous, after, l):
             print(f'The reward {l}: {20 * Rs}')
             return 20 * Rs 
         elif l == 1:
-            print(f'The reward {l}: {20 * Rs}')
-            return 40 * Rs
+            print(f'The reward {l}: {45 * Rs}')
+            return 45 * Rs
         elif l == 2:
-            print(f'The reward {l}: {20 * Rs}')
+            print(f'The reward {l}: {30 * Rs}')
             return 30 * Rs
         elif l == 3:
-            print(f'The reward {l}: {20 * Rs}')
+            print(f'The reward {l}: {25 * Rs}')
             return 25 * Rs
     else:
-        Penalty = -(Rs * 30)
+        Penalty = -(Rs * 10)
         return Penalty
 
 # UCB1 policy implementation ---------------------------------------------------------------------------------------------------------------------------

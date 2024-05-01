@@ -12,16 +12,9 @@ from PersonalModules.Genetic import genetic_algorithm
 from PersonalModules.UCB_VND import UCB_VND
 from PersonalModules.VND import Variable_Neighborhood_Descent
 from PersonalModules.greedy import greedy_algorithm
-from PersonalModules.utilities import bellman_ford, dijkstra, display, get_stat, len_free_slots, len_sinked_relays, sentinel_relay
+from PersonalModules.utilities import bellman_ford, dijkstra, display, get_Diameter, get_stat, len_free_slots, len_sinked_relays, sentinel_relay
 from PersonalModules.vns import Variable_Neighborhood_Search
 from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, save2
-
-def get_Diameter(sentinel_bman, cal_bman, mesh_size):
-    sentinel_relays = sentinel_relay(sentinel_bman)
-    if 999 in sentinel_bman:
-        return cal_bman/mesh_size
-    else:
-        return max(sentinel_relays)
 
 def createEverything(chosen_grid, sink_location, mesh_size):
     free_slots = []
@@ -112,14 +105,14 @@ class MyApplication(QWidget):
         self.beta_input = QLineEdit()
         self.beta_input.setPlaceholderText('0.5')
 
-        self.folder_path = "C:/Users/nouri/OneDrive/Desktop/Papers/Solutions"
+        '''self.folder_path = "C:/Users/nouri/OneDrive/Desktop/Papers/Solutions"
         self.files = os.listdir(self.folder_path)
 
         self.file_label = QLabel("Choose a file to load:", self)
-        self.file_label.move(50, 50)
+        self.file_label.move(50, 50)'''
 
-        self.file_combo = QComboBox(self)
-        self.file_combo.addItems(self.files)
+        #self.file_combo = QComboBox(self)
+        #self.file_combo.addItems(self.files)
 
         self.run_button = QPushButton('Run')
         self.run_button.clicked.connect(self.run_application)
@@ -143,7 +136,7 @@ class MyApplication(QWidget):
         input_layout.addWidget(self.execution_type_label)
         input_layout.addWidget(self.execution_type_radio_button_0)
         input_layout.addWidget(self.execution_type_radio_button_1)
-        input_layout.addWidget(self.execution_type_radio_button_2)
+        # input_layout.addWidget(self.execution_type_radio_button_2)
         input_layout.addWidget(self.Number_of_executions_label)
         input_layout.addWidget(self.Number_of_executions_input)
         input_layout.addWidget(self.Sink_location_label)
@@ -152,8 +145,8 @@ class MyApplication(QWidget):
         input_layout.addWidget(self.alpha_input)
         input_layout.addWidget(self.beta_lable)
         input_layout.addWidget(self.beta_input)
-        input_layout.addWidget(self.file_label)
-        input_layout.addWidget(self.file_combo)
+        # input_layout.addWidget(self.file_label)
+        # input_layout.addWidget(self.file_combo)
         input_layout.addWidget(self.run_button)
         
         output_layout = QVBoxLayout()
@@ -204,7 +197,7 @@ class MyApplication(QWidget):
             self.output_text.append("\n   Starting Genetic algorithm...")
             start_time = time.time()
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(5, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 8, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
@@ -222,7 +215,7 @@ class MyApplication(QWidget):
             self.output_text.append(f'\n Relays BEFORE: {relays_before}')
             self.output_text.append(f'\n Hops BEFORE: {hops_before}')
 
-            display(grid, sink, sinked_relays, sinked_sentinels, title="Genetic Algorithm")
+            # display(grid, sink, sinked_relays, sinked_sentinels, title="Genetic Algorithm")
 
             self.output_text.append("\n   Starting Variable Neighborhood Descent algorithm...")
             sinked_relays, free_slots = UCB_VND(grid, sink, sinked_sentinels, sinked_relays,
@@ -231,6 +224,7 @@ class MyApplication(QWidget):
 
             self.output_text.append("\n   Please wait until some calculations are finished...")
 
+            distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
             performance_after, relays_after, hops_after = get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sinked_sentinels, mesh_size, alpha, beta)
             #diameter_after = round(cal_bman / mesh_size)
             diameter_after = get_Diameter(sentinel_bman, cal_bman, mesh_size)
@@ -256,12 +250,13 @@ class MyApplication(QWidget):
 
             self.output_text.append(f'Execution time: {time_string}\n')
 
-            display(grid, sink, sinked_relays, sinked_sentinels, title="VND Algorihtm")
+            display(grid, sink, sinked_relays, sinked_sentinels, title="UCB1_GVNS Algorihtm")
 
             self.output_text.append("\n Another execution ! \n")
 
             print(f'\nThe final solution: {len_sinked_relays(sinked_relays)} relays deployed: {sinked_relays}')
             print(f'The final solution: {len_free_slots(grid, sinked_relays)} free slots remaining\n\n')
+            distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
             print(f'The final sentinel list solution: {sentinel_bman}')
 
         elif self.execution_type_radio_button_1.isChecked():

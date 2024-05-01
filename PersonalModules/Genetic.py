@@ -169,6 +169,7 @@ def genetic_algorithm(population_size, generations, sink, sinkless_sentinels, fr
         # Perform crossover and mutation to generate a new solution
         child = crossover(parent1, parent2)
         child = mutate(parent1, free_slots, custom_range)
+        child = parent1
 
         # Append the best fitness score of this generation to fitness_per_generation
         fitness_per_generation.append(max(fitness_scores))

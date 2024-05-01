@@ -1,8 +1,9 @@
 from heapq import heappop, heappush
 import heapq
+import json
 import math
 from multiprocessing import Process, Queue
-import time
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -72,7 +73,6 @@ def display2(grid, sink, sinked_relays, sentinels):
     plt.yticks(ticks)
     plt.show()
 
-
 def display_realtime(grid, sink, sinked_relays, sentinels):
     # create a figure and axis for the plot
     fig, ax = plt.subplots()
@@ -111,7 +111,6 @@ def display_realtime(grid, sink, sinked_relays, sentinels):
 
     # show the plot
     plt.show()
-
 
 def bars_chart(values):
     import matplotlib.pyplot as plt
@@ -159,7 +158,6 @@ def bars_chart(values):
     fig_manager.window.state('zoomed')'''
     plt.show()
 
-
 def bars_chart2(values):
     import matplotlib.pyplot as plt
 
@@ -182,7 +180,6 @@ def bars_chart2(values):
         plt.text(i, v, avg_time_string, ha='center', va='bottom')
     # Displaying the chart
     plt.show()
-
 
 def test(grid, sink, sinked_relays, sentinels):
     First_time = True
@@ -227,6 +224,71 @@ def test(grid, sink, sinked_relays, sentinels):
         First_time = False
         plt.show()
 
+def plot_histogram(neighborhood_counts, max_iterations):
+    """
+    Plot a histogram of neighborhoods selections as percentages.
+
+    Args:
+        neighborhood_counts (list): List of counts for each neighborhood.
+        max_iterations (int): Total number of iterations.
+
+    Returns:
+        None
+    """
+    percentages = [count / max_iterations * 100 for count in neighborhood_counts]
+    neighborhoods = [f'N({i+1})' for i in range(len(neighborhood_counts))]
+    plt.bar(neighborhoods, percentages)
+    plt.title('Histogram of Neighborhoods selections (Percentage)')
+    plt.xlabel('Neighborhoods')
+    plt.ylabel('Percentage of total iterations')
+    plt.show()
+
+    # Print percentages truncated to two decimal places
+    total_percentage = sum(percentages)
+    for i, percentage in enumerate(percentages):
+        if i < len(percentages) - 1:
+            print(f'Percentage of selecting neighborhood N({i}): {percentage:.2f}%')
+        else:
+            # For the last percentage, adjust to ensure the total is 100%
+            print(f'Percentage of selecting neighborhood N({i}): {100 - (total_percentage - percentage):.2f}%')
+
+def plot_fitness_improvement(iteration_numbers, fitness_values):
+    # Plot fitness values against iteration numbers
+    plt.plot(iteration_numbers, fitness_values)
+    plt.title('Fitness Improvement Over Time')
+    plt.xlabel('Iteration')
+    plt.ylabel('Fitness')
+    plt.show()
+
+def track_neighborhood_sequence(prior_neighborhood, current_neighborhood, sequence_counts):
+    if prior_neighborhood is not None:
+        sequence = (prior_neighborhood, current_neighborhood)
+        sequence_key = f"N({sequence[0] + 1}) -> N({sequence[1] + 1})"  # Convert tuple to string
+        sequence_counts[sequence_key] = sequence_counts.get(sequence_key, 0) + 1
+
+def print_sequence_counts(sequence_counts):
+    print("\nNeighborhood Sequences:")
+    print("======================")
+    print("Sequence   |   Count")
+    print("----------------------")
+    for sequence, count in sequence_counts.items():
+        print(f"  {sequence}      |   {count} times")
+
+def write_sequence_counts_to_json(grid_size, sink_coordinates, num_relays_deployed, diameter, sequence_counts, fitness, filename, filepath):
+    data = {
+        "grid_size": grid_size,
+        "sink_coordinates": sink_coordinates,
+        "num_relays_deployed": num_relays_deployed,
+        "diameter": diameter,
+        "Fitness": fitness,
+        "sequence_counts": sequence_counts
+    }
+
+    # Create the directory if it doesn't exist
+    os.makedirs(filepath, exist_ok=True)
+
+    with open(os.path.join(filepath, filename), 'w') as json_file:
+        json.dump(data, json_file, indent=4)
 
 # --------------------------------------------------------------------------------------------------------------
 
@@ -351,7 +413,6 @@ def floyd_warshall(grid, sink, relays, sentinels):
     return graph[start], sentinel_bman, cal_bman
 
 def dijkstra(grid, sink, relays, sentinels):
-    print('Dijkstra algorithm!')
     chosen_grid = int(grid / 20)
     meshes = chosen_grid * chosen_grid
     start = -1
@@ -514,11 +575,12 @@ def get_stat(sinked_relays, sentinel_bman, cal_bman, grid, free_slots, sink, sin
 def epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, cal_bman, mesh_size, alpha, beta): 
 
     distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
+    epsilon = int(grid / 20)
     
     print(f'\nSentinel dijkstra: {sentinel_bman}\n')
     performance = ((alpha * len_sinked_relays(sinked_relays)) + (beta * (get_Diameter(sentinel_bman, cal_bman, mesh_size))))
 
-    if 999 in sentinel_bman:
+    if (999 in sentinel_bman) or (get_Diameter(sentinel_bman, cal_bman, mesh_size) > epsilon ):
         return performance + 999
     else:
         return performance

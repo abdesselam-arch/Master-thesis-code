@@ -1,10 +1,7 @@
 import math
 import random
 
-from matplotlib import pyplot as plt
-import numpy as np
-
-from PersonalModules.utilities import bellman_ford, bellman_ford_matlab, bellman_ford_parallel, dijkstra, epsilon_constraints, floyd_warshall_paths_matlab, len_free_slots, len_sinked_relays
+from PersonalModules.utilities import dijkstra, epsilon_constraints, get_Diameter, len_free_slots, len_sinked_relays, plot_fitness_improvement, plot_histogram, print_sequence_counts, track_neighborhood_sequence, write_sequence_counts_to_json
 from PersonalModules import Upper_Confidence_Bound
 from main import get_ordinal_number
 
@@ -27,8 +24,8 @@ def add_next_to_relay(sentinels, sink, sinked_relays, free_slots, remember_used_
     if candidate_slots:
         chosen_random_slot = random.choice(candidate_slots)
         # sinked_relays.append((chosen_random_slot, (abs(sink[0] - chosen_random_slot[0]) + abs(sink[1] - chosen_random_slot[1])) / mesh_size))
-        sinked_relays.append((chosen_random_slot, 1))
-        #sinked_relays.append((chosen_random_slot, hop_count(sink, chosen_random_slot, sentinels)))
+        # sinked_relays.append((chosen_random_slot, 1))
+        sinked_relays.append((chosen_random_slot, hop_count(sink, chosen_random_slot, sentinels, mesh_size)))
         performed_action = [1, chosen_random_slot, "(P) Add a relay next to a random connected relay's neighborhood."]
         free_slots.remove(chosen_random_slot)
         remember_used_relays.append(chosen_random_slot)
@@ -119,8 +116,8 @@ def add_relay_next_to_sentinel(sentinels, sink, sinked_relays, free_slots, remem
             if candidate_slots:
                 chosen_slot = random.choice(candidate_slots)
                 # sinked_relays.append((chosen_slot, (abs(sink[0] - chosen_slot[0]) + abs(sink[1] - chosen_slot[1])) / mesh_size))
-                sinked_relays.append((chosen_slot, 1))
-                #sinked_relays.append((chosen_slot, hop_count(sink, chosen_slot, sentinels)))
+                # sinked_relays.append((chosen_slot, 1))
+                sinked_relays.append((chosen_slot, hop_count(sink, chosen_slot, sentinels, mesh_size)))
                 performed_action = [1, chosen_slot, "(P) Add a relay next to a sentinel with no relay neighbors."]
                 free_slots.remove(chosen_slot)
                 remember_used_relays.append(chosen_slot)
@@ -179,7 +176,7 @@ def shaking(sinked_sentinels, sinked_relays, free_slots, custom_range, sink, mes
     print('Shaking operation done!')
     return free_slots, sinked_relays, action, remember_used_relays
 
-def hop_count(sink, relay, sentinels):
+def hop_count(sink, relay, sentinels, mesh_size):
     current_position = relay
     hop_count = 0
     # Iterate until the current position reaches the sink
@@ -196,24 +193,8 @@ def hop_count(sink, relay, sentinels):
         min_index = distances.index(min(distances))
         current_position = neighbors[min_index]
         hop_count += 1
-    return int(hop_count/20)
+    return int(hop_count /mesh_size)
 
-def plot_histogram(neighborhood_counts):
-    """
-    Plot a histogram of neighborhoods selections.
-
-    Args:
-        neighborhood_counts (list): List of counts for each neighborhood.
-
-    Returns:
-        None
-    """
-    neighborhoods = [f'N({i+1})' for i in range(len(neighborhood_counts))]
-    plt.bar(neighborhoods, neighborhood_counts)
-    plt.title('Histogram of Neighborhoods selections')
-    plt.xlabel('Neighborhoods')
-    plt.ylabel('Number of times each neighborhood was selected by the algorithm')
-    plt.show()
 
 # UCB1 - Variable Neighborhood Descent ---------------------------------------------------------------------------
 def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta):
@@ -222,10 +203,17 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     iteration = 0
     n_free_slots, n_sinked_relays = [], []
     neighborhood_counts = [0] * lmax
-    max_iterations = int(grid /20) * int(grid /20)
+    max_iterations = int(grid /mesh_size) * int(grid /mesh_size)
+    # max_iterations = 1000
     print(f'Max num of iterations: {max_iterations}')
     total_number_actions = 0
     exploration_factor = 2
+    consecutive_errors = 0
+
+    fitness_values = []
+    iteration_numbers = []
+    sequence_counts = {}
+    prior_neighborhood = None  # Initialize prior neighborhood to None
 
     # The near optimal solution to be returned at the end
     optimal_sinked_relays, optimal_free_slots = None, None
@@ -237,16 +225,21 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
 
     # Shaking operation GVNS
     n_free_slots, n_sinked_relays, action, remember_used_relays = shaking(sinked_sentinels, sinked_relays, free_slots, custom_range, sink, mesh_size)
-    while iteration <= max_iterations:
+    # while (iteration <= max_iterations) and (consecutive_errors <= 6):
+    while consecutive_errors <= int(grid /mesh_size):
         i = 0  # Neighbor counter
         improvement = True  # Flag to indicate improvement
         previous = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, 0, mesh_size, alpha, beta)
         
         l, neighborhood_count = Upper_Confidence_Bound.UCB1_policy(lmax, qualities, exploration_factor, total_number_actions)
         neighborhood_counts[l] += 1
+
+        # Update sequence counts
+        track_neighborhood_sequence(prior_neighborhood, l, sequence_counts)
         while improvement and i < len(sinked_relays) + 1:
             improvement = False
             i += 1
+            prior_neighborhood = l  # Update prior neighborhood
             if l == 0:
                 n_free_slots, n_sinked_relays, action, remember_used_relays = add_next_to_relay(sinked_sentinels, sink, sinked_relays, free_slots, [], custom_range, mesh_size)
                 print('Relay added')
@@ -275,9 +268,12 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
                 print(f'\nPrevious Fitness: {previous}, After Fitness: {after}')
                 free_slots, sinked_relays = n_free_slots, n_sinked_relays
                 improvement = True
+                consecutive_errors = 0
                 # Update the qualities[] of the chosen neighborhoods - Rewarding the best Action
                 qualities[l] += Upper_Confidence_Bound.Credit_Assignment(improvement, previous, after, l) / neighborhood_count 
                 previous = after
+                fitness_values.append(after)
+                iteration_numbers.append(iteration)
 
                 if after < best_solution_relays:
                     best_solution_relays = after
@@ -289,8 +285,11 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
             else:
                 iteration += 1
                 print(f'\n\nReinforcement Learning Episode: {get_ordinal_number(iteration)}')
-                if (max_iterations - iteration <= 10):
+                if (max_iterations - iteration <= int(grid/mesh_size)):
                     exploration_factor = 0
+                if iteration >= max_iterations:
+                    consecutive_errors += 1 
+                    print(f'\n\n     LS Consecutive errors: {consecutive_errors}')
 
         # else:
         # Update the qualities[] of the chosen neighborhoods - Regret the best Action
@@ -299,7 +298,13 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
         print(f'\nThere are {len_sinked_relays(sinked_relays)} relays deployed')
         print(f'There are {len_free_slots(grid, sinked_relays)} free slots remaining\n\n')
         
+    
     #plot the histogram    
-    # (toggle it when we want) plot_histogram(neighborhood_counts)
+    # (toggle it when we want) plot_histogram(neighborhood_counts, max_iterations) 
+    plot_fitness_improvement(iteration_numbers, fitness_values)
+    # print_sequence_counts(sequence_counts)
+    write_sequence_counts_to_json(grid_size=int(grid/mesh_size), sink_coordinates= sink, num_relays_deployed = len_sinked_relays(sinked_relays),
+                                  diameter=get_Diameter(sentinel_bman, cal_bman, mesh_size), sequence_counts = sequence_counts, fitness= best_solution_relays,
+                                  filename= f'{int(grid/mesh_size)}x{int(grid/mesh_size)} sequence counts', filepath = "C:/Users/nouri/OneDrive/Desktop/Papers/Python program files/Python program files/Neighborhoods sequence")
 
     return optimal_sinked_relays, optimal_free_slots
