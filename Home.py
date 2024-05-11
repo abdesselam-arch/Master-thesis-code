@@ -197,7 +197,7 @@ class MyApplication(QWidget):
             self.output_text.append("\n   Starting Genetic algorithm...")
             start_time = time.time()
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 8, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
@@ -250,7 +250,7 @@ class MyApplication(QWidget):
 
             self.output_text.append(f'Execution time: {time_string}\n')
 
-            display(grid, sink, sinked_relays, sinked_sentinels, title="UCB1_GVNS Algorihtm")
+            # display(grid, sink, sinked_relays, sinked_sentinels, title="UCB1_GVNS Algorihtm")
 
             self.output_text.append("\n Another execution ! \n")
 

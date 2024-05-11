@@ -203,12 +203,20 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     iteration = 0
     n_free_slots, n_sinked_relays = [], []
     neighborhood_counts = [0] * lmax
-    max_iterations = int(grid /mesh_size) * int(grid /mesh_size)
+    #max_iterations = len_sinked_relays(sinked_relays)
+    max_iterations = int(grid /mesh_size)**2
     # max_iterations = 1000
     print(f'Max num of iterations: {max_iterations}')
     total_number_actions = 0
     exploration_factor = 2
     consecutive_errors = 0
+    
+    # For the termination criteria
+    velocities = []
+    velocity = 0
+    velocity_length = 6
+    avg_velocity = 0
+    patience = 2
 
     fitness_values = []
     iteration_numbers = []
@@ -226,7 +234,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     # Shaking operation GVNS
     n_free_slots, n_sinked_relays, action, remember_used_relays = shaking(sinked_sentinels, sinked_relays, free_slots, custom_range, sink, mesh_size)
     # while (iteration <= max_iterations) and (consecutive_errors <= 6):
-    while consecutive_errors <= int(grid /mesh_size):
+    while consecutive_errors <= (int(grid/mesh_size) // 2) + patience:
         i = 0  # Neighbor counter
         improvement = True  # Flag to indicate improvement
         previous = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, 0, mesh_size, alpha, beta)
@@ -271,9 +279,14 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
                 consecutive_errors = 0
                 # Update the qualities[] of the chosen neighborhoods - Rewarding the best Action
                 qualities[l] += Upper_Confidence_Bound.Credit_Assignment(improvement, previous, after, l) / neighborhood_count 
+                velocity = abs(previous - after)
                 previous = after
                 fitness_values.append(after)
                 iteration_numbers.append(iteration)
+
+                velocities.append(velocity)
+                last_n_velocities = velocities[-velocity_length:]
+                print(f'\n\n\nLast {velocity_length} velocities: {last_n_velocities}')
 
                 if after < best_solution_relays:
                     best_solution_relays = after
@@ -285,11 +298,14 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
             else:
                 iteration += 1
                 print(f'\n\nReinforcement Learning Episode: {get_ordinal_number(iteration)}')
+                last_n_velocities = velocities[-velocity_length:]
+                avg_velocity = (sum(last_n_velocities) or 0) / (len(last_n_velocities) or 1)
+                print(f'The AVG velocity: {avg_velocity}')
                 if (max_iterations - iteration <= int(grid/mesh_size)):
                     exploration_factor = 0
-                if iteration >= max_iterations:
+                if (iteration >= max_iterations) and (avg_velocity <= 0.6):
                     consecutive_errors += 1 
-                    print(f'\n\n     LS Consecutive errors: {consecutive_errors}')
+                    print(f'\n\n     (LS) Consecutive errors: {consecutive_errors}')
 
         # else:
         # Update the qualities[] of the chosen neighborhoods - Regret the best Action
@@ -303,8 +319,8 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     # (toggle it when we want) plot_histogram(neighborhood_counts, max_iterations) 
     plot_fitness_improvement(iteration_numbers, fitness_values)
     # print_sequence_counts(sequence_counts)
-    write_sequence_counts_to_json(grid_size=int(grid/mesh_size), sink_coordinates= sink, num_relays_deployed = len_sinked_relays(sinked_relays),
+    '''write_sequence_counts_to_json(grid_size=int(grid/mesh_size), sink_coordinates= sink, num_relays_deployed = len_sinked_relays(sinked_relays),
                                   diameter=get_Diameter(sentinel_bman, cal_bman, mesh_size), sequence_counts = sequence_counts, fitness= best_solution_relays,
-                                  filename= f'{int(grid/mesh_size)}x{int(grid/mesh_size)} sequence counts', filepath = "C:/Users/nouri/OneDrive/Desktop/Papers/Python program files/Python program files/Neighborhoods sequence")
+                                  filename= f'{int(grid/mesh_size)}x{int(grid/mesh_size)} sequence counts', filepath = "C:/Users/nouri/OneDrive/Desktop/Papers/Python program files/Python program files/Neighborhoods sequence")'''
 
     return optimal_sinked_relays, optimal_free_slots

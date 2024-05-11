@@ -6,6 +6,7 @@ from multiprocessing import Process, Queue
 import os
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import numpy as np
 from matplotlib.animation import FuncAnimation
 import matlab.engine
@@ -250,7 +251,7 @@ def plot_histogram(neighborhood_counts, max_iterations):
             print(f'Percentage of selecting neighborhood N({i}): {percentage:.2f}%')
         else:
             # For the last percentage, adjust to ensure the total is 100%
-            print(f'Percentage of selecting neighborhood N({i}): {100 - (total_percentage - percentage):.2f}%')
+            print(f'Percentage of selecting neighborhood N({i}): {abs(100 - (total_percentage - percentage)):.2f}%')
 
 def plot_fitness_improvement(iteration_numbers, fitness_values):
     # Plot fitness values against iteration numbers
@@ -258,6 +259,11 @@ def plot_fitness_improvement(iteration_numbers, fitness_values):
     plt.title('Fitness Improvement Over Time')
     plt.xlabel('Iteration')
     plt.ylabel('Fitness')
+    plt.grid(True)
+    # plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+    plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))  # Set integer ticks on x-axis
+    plt.gca().yaxis.set_major_locator(MaxNLocator(integer=True))    
+    plt.tight_layout()  # Adjust layout to prevent overlap of labels
     plt.show()
 
 def track_neighborhood_sequence(prior_neighborhood, current_neighborhood, sequence_counts):
