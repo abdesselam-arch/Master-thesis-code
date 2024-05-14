@@ -1,7 +1,7 @@
 import math
 import random
 
-from PersonalModules.utilities import dijkstra, epsilon_constraints, get_Diameter, len_free_slots, len_sinked_relays, plot_fitness_improvement, plot_histogram, print_sequence_counts, track_neighborhood_sequence, write_sequence_counts_to_json
+from PersonalModules.utilities import dijkstra, epsilon_constraints, get_Diameter, len_free_slots, len_sinked_relays, monitor_performance, plot_fitness_improvement, plot_histogram, print_sequence_counts, track_neighborhood_sequence, write_sequence_counts_to_json
 from PersonalModules import Upper_Confidence_Bound
 from main import get_ordinal_number
 
@@ -195,7 +195,7 @@ def hop_count(sink, relay, sentinels, mesh_size):
         hop_count += 1
     return int(hop_count /mesh_size)
 
-
+@monitor_performance
 # UCB1 - Variable Neighborhood Descent ---------------------------------------------------------------------------
 def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_range, mesh_size, lmax, alpha, beta):
     l = 1  # Neighborhood counter
@@ -222,6 +222,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     iteration_numbers = []
     sequence_counts = {}
     prior_neighborhood = None  # Initialize prior neighborhood to None
+    neighborhood_iteration = []
 
     # The near optimal solution to be returned at the end
     optimal_sinked_relays, optimal_free_slots = None, None
@@ -282,6 +283,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
                 velocity = abs(previous - after)
                 previous = after
                 fitness_values.append(after)
+                neighborhood_iteration.append(l + 1)
                 iteration_numbers.append(iteration)
 
                 velocities.append(velocity)
@@ -317,10 +319,11 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     
     #plot the histogram    
     # (toggle it when we want) plot_histogram(neighborhood_counts, max_iterations) 
-    plot_fitness_improvement(iteration_numbers, fitness_values)
+    plot_fitness_improvement(iteration_numbers, fitness_values, neighborhood_iteration)
     # print_sequence_counts(sequence_counts)
     '''write_sequence_counts_to_json(grid_size=int(grid/mesh_size), sink_coordinates= sink, num_relays_deployed = len_sinked_relays(sinked_relays),
                                   diameter=get_Diameter(sentinel_bman, cal_bman, mesh_size), sequence_counts = sequence_counts, fitness= best_solution_relays,
                                   filename= f'{int(grid/mesh_size)}x{int(grid/mesh_size)} sequence counts', filepath = "C:/Users/nouri/OneDrive/Desktop/Papers/Python program files/Python program files/Neighborhoods sequence")'''
+    print(f'neighborhood at every iteration: {neighborhood_iteration}')
 
     return optimal_sinked_relays, optimal_free_slots

@@ -4,12 +4,14 @@ import json
 import math
 from multiprocessing import Process, Queue
 import os
+import time
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from matplotlib.animation import FuncAnimation
 import matlab.engine
+import psutil
 
 def get_Diameter(sentinel_bman, cal_bman, mesh_size):
     sentinel_relays = sentinel_relay(sentinel_bman)
@@ -253,11 +255,22 @@ def plot_histogram(neighborhood_counts, max_iterations):
             # For the last percentage, adjust to ensure the total is 100%
             print(f'Percentage of selecting neighborhood N({i}): {abs(100 - (total_percentage - percentage)):.2f}%')
 
-def plot_fitness_improvement(iteration_numbers, fitness_values):
+def plot_fitness_improvement(iteration_numbers, fitness_values, neighborhoods):
     # Plot fitness values against iteration numbers
     plt.plot(iteration_numbers, fitness_values)
     plt.title('Fitness Improvement Over Time')
-    plt.xlabel('Iteration')
+
+    # Check if the length of neighborhoods is too long
+    max_chars_per_line = 200
+    neighborhoods_str = ',  '.join(map(str, neighborhoods))
+    if len(neighborhoods_str) > max_chars_per_line:
+        # Split neighborhoods into multiple lines
+        neighborhoods_lines = [neighborhoods_str[i:i+max_chars_per_line] for i in range(0, len(neighborhoods_str), max_chars_per_line)]
+        neighborhoods_label = '\n'.join(neighborhoods_lines)
+        plt.xlabel('(' + neighborhoods_label + ')')
+    else:
+        plt.xlabel('(' + neighborhoods_str + ')')
+
     plt.ylabel('Fitness')
     plt.grid(True)
     # plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
@@ -296,6 +309,30 @@ def write_sequence_counts_to_json(grid_size, sink_coordinates, num_relays_deploy
     with open(os.path.join(filepath, filename), 'w') as json_file:
         json.dump(data, json_file, indent=4)
 
+def monitor_performance(func):
+    def wrapper(*args, **kwargs):
+        # Start monitoring memory and CPU usage
+        process = psutil.Process()
+        start_memory = process.memory_info().rss / 1024 / 1024  # Memory in MB
+        start_cpu = process.cpu_percent()
+
+        # Execute the function
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+
+        # Calculate memory and CPU consumption
+        end_memory = process.memory_info().rss / 1024 / 1024  # Memory in MB
+        end_cpu = process.cpu_percent()
+
+        # Print the results
+        print(f"Memory consumed: {end_memory - start_memory:.2f} MB")
+        print(f"CPU cores consumed: {end_cpu - start_cpu:.2f}%")
+        print(f"Execution time: {end_time - start_time:.2f} seconds")
+
+        return result
+
+    return wrapper
 # --------------------------------------------------------------------------------------------------------------
 
 def bellman_ford(grid, free_slots, sink, relays, sentinels):
