@@ -189,7 +189,8 @@ def plot_fitness_comparison():
     grid_sizes = ['17x17', '20x20', '25x25', '30x30', '35x35']
     fitness_ga = [111.25, 156.1, 254.5, 377, 522.1]
     #fitness_ucb_gvns = [56, 73, 133.9, 171.95, 222]
-    fitness_ucb_gvns = [62, 83, 134.5, 175.5, 226.05]
+    # fitness_ucb_gvns = [62, 83, 134.5, 175.5, 226.05]
+    fitness_ucb_gvns = [106.5, 151, 248.5, 372, 516.5]
 
     # Setting up the bar chart
     bar_width = 0.35
@@ -204,7 +205,7 @@ def plot_fitness_comparison():
     # Adding labels and titles
     ax.set_xlabel('Grid Size')
     ax.set_ylabel('Fitness')
-    ax.set_title('Fitness Comparison between GA and UCB_GVNS')
+    ax.set_title('Fitness Comparison between GA and BVNS')
     ax.set_xticks([i + bar_width / 2 for i in index])
     ax.set_xticklabels(grid_sizes)
     ax.legend()

@@ -32,15 +32,28 @@ def mutate(solution, free_slots, custom_range):
     mutated_solution = solution.copy()
     sentinel_index = random.randint(0, len(mutated_solution) - 1)
     current_node = mutated_solution[sentinel_index][-1]
-    
-    while len(free_slots) > 0:
-        nearby_candidates = [node for node in free_slots if math.dist(current_node, node) < custom_range]
-        if not nearby_candidates:
-            break
-        chosen_node = random.choice(nearby_candidates)
+
+    # Check if free_slots is empty
+    if not (free_slots):
+        print("No mutation!")
+        return mutated_solution
+
+    # Randomly select a slot
+    chosen_node = random.choice(free_slots)
+    if chosen_node in mutated_solution[sentinel_index]:
+        # Remove relay if the slot is already occupied
+        mutated_solution[sentinel_index].remove(chosen_node)
+        free_slots.append(chosen_node)  # Add the slot back to free slots
+    else:
+        # Add relay if the slot is free
         mutated_solution[sentinel_index].append(chosen_node)
-        free_slots.remove(chosen_node)
-        current_node = chosen_node
+        free_slots.remove(chosen_node)  # Remove the slot from free slots
+    current_node = chosen_node
+    if current_node in mutated_solution[sentinel_index][:-1]:
+        # If the chosen slot is in the sentinels, choose again
+        nearby_candidates = []
+    else:
+        nearby_candidates = [node for node in free_slots if math.dist(current_node, node) < custom_range]
 
     print('Success! Mutation operation complete')
     return mutated_solution
