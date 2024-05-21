@@ -184,6 +184,34 @@ def bars_chart2(values):
     # Displaying the chart
     plt.show()
 
+def plot_fitness_comparison():
+    # Data for the grids and corresponding fitness values
+    grid_sizes = ['17x17', '20x20', '25x25', '30x30', '35x35']
+    fitness_ga = [111.25, 156.1, 254.5, 377, 522.1]
+    #fitness_ucb_gvns = [56, 73, 133.9, 171.95, 222]
+    fitness_ucb_gvns = [62, 83, 134.5, 175.5, 226.05]
+
+    # Setting up the bar chart
+    bar_width = 0.35
+    index = range(len(grid_sizes))
+
+    fig, ax = plt.subplots()
+
+    # Plotting the bars for GA and UCB_GVNS
+    bars1 = ax.bar(index, fitness_ga, bar_width, label='GA', color='#3c6aa6')
+    bars2 = ax.bar([i + bar_width for i in index], fitness_ucb_gvns, bar_width, label='UCB_GVNS', color='green')
+
+    # Adding labels and titles
+    ax.set_xlabel('Grid Size')
+    ax.set_ylabel('Fitness')
+    ax.set_title('Fitness Comparison between GA and UCB_GVNS')
+    ax.set_xticks([i + bar_width / 2 for i in index])
+    ax.set_xticklabels(grid_sizes)
+    ax.legend()
+
+    # Display the plot
+    plt.show()
+
 def test(grid, sink, sinked_relays, sentinels):
     First_time = True
     # ----------------------------------------------------------------------------------------------------------
@@ -257,11 +285,11 @@ def plot_histogram(neighborhood_counts, max_iterations):
 
 def plot_fitness_improvement(iteration_numbers, fitness_values, neighborhoods):
     # Plot fitness values against iteration numbers
-    plt.plot(iteration_numbers, fitness_values)
+    plt.plot(iteration_numbers, fitness_values, marker='o')
     plt.title('Fitness Improvement Over Time')
 
     # Check if the length of neighborhoods is too long
-    max_chars_per_line = 200
+    max_chars_per_line = 250
     neighborhoods_str = ',  '.join(map(str, neighborhoods))
     if len(neighborhoods_str) > max_chars_per_line:
         # Split neighborhoods into multiple lines
@@ -326,7 +354,7 @@ def monitor_performance(func):
         end_cpu = process.cpu_percent()
 
         # Print the results
-        print(f"Memory consumed: {end_memory - start_memory:.2f} MB")
+        print(f"Memory consumed: {abs(end_memory - start_memory):.2f} MB")
         print(f"CPU cores consumed: {end_cpu - start_cpu:.2f}%")
         print(f"Execution time: {end_time - start_time:.2f} seconds")
 

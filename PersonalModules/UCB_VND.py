@@ -235,7 +235,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
     # Shaking operation GVNS
     n_free_slots, n_sinked_relays, action, remember_used_relays = shaking(sinked_sentinels, sinked_relays, free_slots, custom_range, sink, mesh_size)
     # while (iteration <= max_iterations) and (consecutive_errors <= 6):
-    while consecutive_errors <= (int(grid/mesh_size) // 2) + patience:
+    while consecutive_errors <= 1:
         i = 0  # Neighbor counter
         improvement = True  # Flag to indicate improvement
         previous = epsilon_constraints(grid, free_slots, sink, sinked_relays, sinked_sentinels, 0, mesh_size, alpha, beta)
@@ -275,7 +275,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
             distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
             if (after < previous) and (sentinel_bman.count(999) == 0):
                 print(f'\nPrevious Fitness: {previous}, After Fitness: {after}')
-                free_slots, sinked_relays = n_free_slots, n_sinked_relays
+                free_slots, sinked_relays = n_free_slots.copy(), n_sinked_relays.copy()
                 improvement = True
                 consecutive_errors = 0
                 # Update the qualities[] of the chosen neighborhoods - Rewarding the best Action
@@ -305,7 +305,7 @@ def UCB_VND(grid, sink, sinked_sentinels, sinked_relays, free_slots, custom_rang
                 print(f'The AVG velocity: {avg_velocity}')
                 if (max_iterations - iteration <= int(grid/mesh_size)):
                     exploration_factor = 0
-                if (iteration >= max_iterations) and (avg_velocity <= 0.6):
+                if (iteration >= max_iterations) and (avg_velocity <= 1):
                     consecutive_errors += 1 
                     print(f'\n\n     (LS) Consecutive errors: {consecutive_errors}')
 

@@ -12,7 +12,7 @@ from PersonalModules.Genetic import genetic_algorithm
 from PersonalModules.UCB_VND import UCB_VND
 from PersonalModules.VND import Variable_Neighborhood_Descent
 from PersonalModules.greedy import greedy_algorithm
-from PersonalModules.utilities import bellman_ford, dijkstra, display, get_Diameter, get_stat, len_free_slots, len_sinked_relays, sentinel_relay
+from PersonalModules.utilities import bellman_ford, dijkstra, display, get_Diameter, get_stat, len_free_slots, len_sinked_relays, plot_fitness_comparison, sentinel_relay
 from PersonalModules.vns import Variable_Neighborhood_Search
 from main import calculate_X, calculate_Y, create2, get_ordinal_number, save, save2
 
@@ -197,7 +197,7 @@ class MyApplication(QWidget):
             self.output_text.append("\n   Starting Genetic algorithm...")
             start_time = time.time()
 
-            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 10, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
+            sinked_sentinels, sinked_relays, free_slots, Finished, ERROR = genetic_algorithm(3, 12, sink, sinkless_sentinels, free_slots, max_hops_number+1, custom_range, mesh_size)
             self.output_text.append("   Genetic algorithm finished execution successfully !")
 
             # Get the performance before VNS, perform VNS then Get the performance after VNS
@@ -250,7 +250,7 @@ class MyApplication(QWidget):
 
             self.output_text.append(f'Execution time: {time_string}\n')
 
-            # display(grid, sink, sinked_relays, sinked_sentinels, title="UCB1_GVNS Algorihtm")
+            display(grid, sink, sinked_relays, sinked_sentinels, title="UCB1_GVNS Algorihtm")
 
             self.output_text.append("\n Another execution ! \n")
 
@@ -258,6 +258,7 @@ class MyApplication(QWidget):
             print(f'The final solution: {len_free_slots(grid, sinked_relays)} free slots remaining\n\n')
             distance_bman, sentinel_bman, cal_bman = dijkstra(grid, sink, sinked_relays, sinked_sentinels)
             print(f'The final sentinel list solution: {sentinel_bman}')
+            plot_fitness_comparison()
 
         elif self.execution_type_radio_button_1.isChecked():
             Solutions_Data = []
